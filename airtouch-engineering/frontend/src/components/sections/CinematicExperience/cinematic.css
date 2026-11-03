@@ -1,0 +1,65 @@
+/* AirTouch Engineering - Cinematic Experience Scoped Styling */
+
+.cinematic-pinned-container {
+  height: 100svh;
+  max-height: 100svh;
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background-color: #09090b;
+}
+
+/* GPU-promoted story panels (transform & opacity only) */
+.cinematic-story-panel {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Color grade & vignette gradient layer */
+.cinematic-vignette-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 75% 70% at 50% 50%,
+    transparent 42%,
+    rgba(9, 9, 11, 0.58) 76%,
+    rgba(9, 9, 11, 0.92) 100%
+  );
+  z-index: 15;
+}
+
+/* Atmospheric orange radial glow overlay */
+.cinematic-glow-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: radial-gradient(
+    ellipse 60% 45% at 50% 60%,
+    rgba(249, 115, 22, 0.32) 0%,
+    rgba(220, 38, 38, 0.14) 35%,
+    transparent 70%
+  );
+  z-index: 18;
+  will-change: opacity;
+}
+
+/* Telemetry Debug HUD */
+.cinematic-debug-hud {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  z-index: 9999;
+  background: rgba(9, 9, 11, 0.88);
+  border: 1px solid #f97316;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  color: #f97316;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  line-height: 1.5;
+}
