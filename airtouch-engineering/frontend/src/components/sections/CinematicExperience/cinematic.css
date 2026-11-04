@@ -1,4 +1,4 @@
-/* AirTouch Engineering - Cinematic Experience Scoped Styling */
+/* AirTouch Engineering - 3D Motorcycle Showcase Scoped Styling */
 
 .cinematic-pinned-container {
   height: 100svh;
@@ -9,11 +9,50 @@
   background-color: #09090b;
 }
 
-/* GPU-promoted story panels (transform & opacity only) */
-.cinematic-story-panel {
-  will-change: transform, opacity;
+/* Interactive pointer stage during Phase 2 (pan-y preserves vertical scroll on touch devices) */
+.cinematic-interactive-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* GPU-promoted floating part label (screen-projected every frame in useFrame) */
+.cinematic-floating-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 35;
+  will-change: transform;
   backface-visibility: hidden;
-  transform: translateZ(0);
+}
+
+/* Mobile low-opacity pulsing hotspot dots */
+.cinematic-hotspot-dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 32;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+@keyframes hotspotPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.85;
+  }
+}
+
+.cinematic-hotspot-pulse {
+  animation: hotspotPulse 2.2s ease-in-out infinite;
 }
 
 /* Color grade & vignette gradient layer */

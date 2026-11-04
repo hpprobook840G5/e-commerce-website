@@ -3,7 +3,6 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import {
   Environment,
   Lightformer,
-  ContactShadows,
   PerformanceMonitor,
   Preload,
 } from '@react-three/drei'
@@ -22,7 +21,7 @@ import MotorcycleModel from './MotorcycleModel.jsx'
 import RoadEnvironment from './RoadEnvironment.jsx'
 import CameraRig from './CameraRig.jsx'
 import ParticleEffects from './ParticleEffects.jsx'
-import { CINEMATIC_CONFIG } from './cinematicConfig.js'
+import { CINEMATIC_CONFIG, SHOWCASE_CAMERA_POS } from './cinematicConfig.js'
 
 // Pre-allocated chromatic aberration offset vector (zero per-frame allocation)
 const CHROMATIC_OFFSET = new THREE.Vector2(0.0005, 0.0005)
@@ -96,7 +95,10 @@ function SceneController({ cinematicStateRef, modelReady, onCompiled }) {
 export default function CinematicCanvas({
   tier,
   cinematicStateRef,
-  mouseRef,
+  interactionRef,
+  floatingLabelRef,
+  mobileDotRefs,
+  prefersReducedMotion = false,
   isInViewport = true,
   onSceneReady,
 }) {
@@ -171,7 +173,12 @@ export default function CinematicCanvas({
           stencil: false,
           depth: true,
         }}
-        camera={{ position: [0, 0.65, 3.8], fov: 42, near: 0.1, far: 75 }}
+        camera={{
+          position: SHOWCASE_CAMERA_POS,
+          fov: 42,
+          near: 0.1,
+          far: 75,
+        }}
         onCreated={({ gl, scene }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping
           gl.toneMappingExposure = 1.12
@@ -204,7 +211,6 @@ export default function CinematicCanvas({
             background={false}
             environmentIntensity={0.85}
           >
-            {/* Long overhead studio softbox for crisp tank & fairing highlight streak */}
             <Lightformer
               form="rect"
               intensity={2.8}
@@ -213,7 +219,6 @@ export default function CinematicCanvas({
               position={[0, 5.2, 0]}
               rotation={[Math.PI / 2, 0, 0]}
             />
-            {/* Fiery orange side strip for automotive rim reflection */}
             <Lightformer
               form="rect"
               intensity={4.2}
@@ -222,7 +227,6 @@ export default function CinematicCanvas({
               position={[-5.5, 2.0, -1.5]}
               rotation={[0, Math.PI / 2.4, 0]}
             />
-            {/* Cool-white right studio panel for chrome, fork & rotor specularity */}
             <Lightformer
               form="rect"
               intensity={2.4}
@@ -231,7 +235,6 @@ export default function CinematicCanvas({
               position={[5.5, 2.4, 1.2]}
               rotation={[0, -Math.PI / 2.4, 0]}
             />
-            {/* Warm amber rear accent */}
             <Lightformer
               form="ring"
               intensity={2.0}
@@ -243,7 +246,6 @@ export default function CinematicCanvas({
         </Suspense>
 
         {/* ================= ANALYTICAL LIGHTING & 2048 SHADOWS ================= */}
-        {/* 1. Key directional light with tight 2048 shadow frustum around motorcycle */}
         <directionalLight
           position={[3.8, 7.2, 3.8]}
           intensity={1.5}
@@ -261,14 +263,12 @@ export default function CinematicCanvas({
           shadow-normalBias={0.02}
         />
 
-        {/* 2. Damped Orange Rim Light + Shader Pre-Compiler */}
         <SceneController
           cinematicStateRef={cinematicStateRef}
           modelReady={modelReady}
           onCompiled={onSceneReady}
         />
 
-        {/* 3. Cool-white Back Light for silhouette separation */}
         <directionalLight
           position={[0.5, 4.5, -5.5]}
           intensity={1.35}
@@ -276,31 +276,31 @@ export default function CinematicCanvas({
         />
 
         {/* ================= SCENE ELEMENTS ================= */}
-        {/* Continuous Catmull-Rom Spline Camera Rig with Damped Parallax */}
         <CameraRig
           cinematicStateRef={cinematicStateRef}
-          mouseRef={mouseRef}
-          tier={tier}
+          prefersReducedMotion={prefersReducedMotion}
         />
 
-        {/* Photoreal 3D Motorcycle Model (with attached ContactShadows) */}
         <Suspense fallback={null}>
           <MotorcycleModel
             cinematicStateRef={cinematicStateRef}
+            interactionRef={interactionRef}
+            floatingLabelRef={floatingLabelRef}
+            mobileDotRefs={mobileDotRefs}
+            prefersReducedMotion={prefersReducedMotion}
             onModelReady={handleModelReady}
           />
         </Suspense>
 
-        {/* Wet-Asphalt Reflective Road Environment */}
         <RoadEnvironment tier={tier} reflectorEnabled={reflectorEnabled} />
 
-        {/* Particle Embers, Sparks, and Smoke */}
-        <ParticleEffects
-          tier={tier}
-          effectsStateRef={cinematicStateRef}
-        />
+        {!prefersReducedMotion && (
+          <ParticleEffects
+            tier={tier}
+            effectsStateRef={cinematicStateRef}
+          />
+        )}
 
-        {/* Preload all assets into GPU memory */}
         <Preload all />
 
         {/* ================= POST-PROCESSING (Desktop & Tablet Only) ================= */}

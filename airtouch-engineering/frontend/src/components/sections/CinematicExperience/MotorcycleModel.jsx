@@ -2,17 +2,40 @@ import { useMemo, useRef, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useGLTF, ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
-import { CINEMATIC_CONFIG } from './cinematicConfig.js'
+import {
+  AUTO_ROTATE_SPEED,
+  CINEMATIC_CONFIG,
+  CLICKABLE_PARTS,
+  SHOWCASE_BIKE_POS,
+  SHOWCASE_BIKE_ROTATION,
+} from './cinematicConfig.js'
+
+// Pre-allocated vectors and raycaster for zero per-frame / per-pointer-move allocations
+const _raycaster = new THREE.Raycaster()
+const _ndcVec = new THREE.Vector2()
+const _projVec = new THREE.Vector3()
+const _orangeHighlightColor = new THREE.Color('#ff6a00')
+
+// Three.js GLTFLoader sanitizes node/mesh names by stripping '.' characters (e.g. "seat_black.001_0" -> "seat_black001_0")
+const normalizeMeshKey = (name = '') => name.replace(/\./g, '').toLowerCase()
 
 /**
  * Photoreal 3D Motorcycle Model Component
  * - Loads /models/motorcycle.glb with local Draco decoders
- * - Traverses once to assign cached MeshPhysicalMaterial (clearcoat carpaint, glossy dark visor)
- *   and tuned PBR materials (chrome, billet aluminum, matte rubber tires, emissive optics)
- * - Enforces SRGBColorSpace on color textures, LinearSRGBColorSpace on data maps, and max anisotropy
- * - Smooths transforms and lighting in useFrame via frame-rate-independent THREE.MathUtils.damp
+ * - Assigns cached MeshPhysicalMaterial & PBR materials once on load
+ * - Isolates material instances per clickable part (seat, headlight, exhaust,
+ *   front-tire, rear-tire, handlebars) so hover/selection highlights ONLY that part
+ * - Drives Phase 1 approach damping & Phase 2 free 360° rotation (drag inertia + slow 20s/rev auto-rotate with hover pause)
+ * - Screen-projects floating HTML part label & mobile hotspot dots directly via DOM refs in useFrame
  */
-export default function MotorcycleModel({ cinematicStateRef, onModelReady }) {
+export default function MotorcycleModel({
+  cinematicStateRef,
+  interactionRef,
+  floatingLabelRef,
+  mobileDotRefs,
+  prefersReducedMotion = false,
+  onModelReady,
+}) {
   const groupRef = useRef(null)
   const headlightLightRef = useRef(null)
   const headlightBulbRef = useRef(null)
@@ -20,12 +43,20 @@ export default function MotorcycleModel({ cinematicStateRef, onModelReady }) {
   const headlightMatRef = useRef(null)
 
   const gl = useThree((state) => state.gl)
+  const camera = useThree((state) => state.camera)
 
   // Load GLB asset with local Draco decoder support
   const { scene } = useGLTF(CINEMATIC_CONFIG.modelPath, CINEMATIC_CONFIG.dracoPath)
 
-  // Prepare normalized model and cached PBR material library once
-  const { model, createdMaterials } = useMemo(() => {
+  // Prepare normalized model, cached PBR materials, and isolated clickable part registries once
+  const {
+    model,
+    createdMaterials,
+    clickableMeshes,
+    partMaterialsMap,
+    partAnchorsMap,
+    partHighlightLevels,
+  } = useMemo(() => {
     const clone = scene.clone(true)
     const maxAnisotropy = gl?.capabilities?.getMaxAnisotropy?.() || 8
 
@@ -49,8 +80,17 @@ export default function MotorcycleModel({ cinematicStateRef, onModelReady }) {
     clone.position.x = -center.x * scale
     clone.position.y = -box.min.y
     clone.position.z = -center.z * scale
+    clone.updateMatrixWorld(true)
 
-    // Shared cached material dictionary (created once, never cloned per frame)
+    // Lookup from normalized mesh name -> clickable part id
+    const meshToPartId = new Map()
+    CLICKABLE_PARTS.forEach((part) => {
+      part.meshNames.forEach((mName) => {
+        meshToPartId.set(normalizeMeshKey(mName), part.id)
+      })
+    })
+
+    // Base cached material dictionary
     const mats = {
       carpaintPrimary: new THREE.MeshPhysicalMaterial({
         name: 'AirTouch_Carpaint_Charcoal',
@@ -177,6 +217,22 @@ export default function MotorcycleModel({ cinematicStateRef, onModelReady }) {
 
     headlightMatRef.current = mats.headlightLens
 
+    const allDisposables = Object.values(mats)
+    const clickableMeshList = []
+    const partMats = {}
+    const partAnchors = {}
+    const highlightLevels = {}
+
+    CLICKABLE_PARTS.forEach((p) => {
+      partMats[p.id] = []
+      partAnchors[p.id] = new THREE.Vector3(
+        p.localAnchor[0],
+        p.localAnchor[1],
+        p.localAnchor[2]
+      )
+      highlightLevels[p.id] = 0
+    })
+
     const configureTextures = (material) => {
       if (!material) return
       const srgbSlots = ['map', 'emissiveMap']
@@ -198,14 +254,14 @@ export default function MotorcycleModel({ cinematicStateRef, onModelReady }) {
       })
     }
 
-    // Single pass over the 129 meshes to assign cached materials & smooth normals
+    // Single pass over the 129 meshes to assign cached materials & isolate clickable part materials
     clone.traverse((child) => {
       if (!child.isMesh) return
 
-      const meshName = (child.name || '').toLowerCase()
+      const exactName = child.name || ''
+      const meshName = exactName.toLowerCase()
       const matName = (child.material?.name || '').toLowerCase()
 
-      // Cast shadows only from primary exterior silhouette meshes (skips microscopic bolts/decals)
       const isMicroDetail =
         meshName.startsWith('bolt') ||
         meshName.startsWith('decal') ||
@@ -218,13 +274,13 @@ export default function MotorcycleModel({ cinematicStateRef, onModelReady }) {
       child.castShadow = !isMicroDetail
       child.receiveShadow = !isMicroDetail
 
-      // Ensure smooth vertex normals if missing
       if (child.geometry && !child.geometry.attributes.normal) {
         child.geometry.computeVertexNormals()
       }
 
       configureTextures(child.material)
 
+      let baseMat = mats.darkChassis
       if (
         meshName.includes('tire') ||
         matName.includes('tire') ||
@@ -232,7 +288,7 @@ export default function MotorcycleModel({ cinematicStateRef, onModelReady }) {
         meshName.includes('seat') ||
         meshName.includes('hose_black')
       ) {
-        child.material = mats.tireRubber
+        baseMat = mats.tireRubber
       } else if (
         meshName.includes('lightbulb_hl') ||
         meshName.includes('glass_hl') ||
@@ -240,47 +296,111 @@ export default function MotorcycleModel({ cinematicStateRef, onModelReady }) {
         meshName.includes('glass_small_front') ||
         meshName.includes('led_')
       ) {
-        child.material = mats.headlightLens
+        baseMat = mats.headlightLens
       } else if (
         matName.includes('redglass') ||
         meshName.includes('glass_rear') ||
         meshName.includes('ribs_glass_rear')
       ) {
-        child.material = mats.taillightLens
+        baseMat = mats.taillightLens
       } else if (matName.includes('orangeglass')) {
-        child.material = mats.amberSignal
+        baseMat = mats.amberSignal
       } else if (matName.includes('clearglass')) {
-        child.material = mats.visorGlass
+        baseMat = mats.visorGlass
       } else if (matName.includes('carpaint_second')) {
-        child.material = mats.carpaintSecondary
+        baseMat = mats.carpaintSecondary
       } else if (matName.includes('carpaint') || meshName.includes('body_02')) {
-        child.material = mats.carpaintPrimary
+        baseMat = mats.carpaintPrimary
       } else if (
         matName.includes('red.001') ||
         matName.includes('blue.001') ||
         meshName.includes('decal_rim') ||
         meshName.includes('spring_red')
       ) {
-        child.material = mats.orangeAccent
+        baseMat = mats.orangeAccent
       } else if (matName.includes('chrome') || matName.includes('mirror')) {
-        child.material = mats.chrome
+        baseMat = mats.chrome
       } else if (matName.includes('brakedisk')) {
-        child.material = mats.brakeDisc
+        baseMat = mats.brakeDisc
       } else if (matName.includes('gold')) {
-        child.material = mats.anodizedGold
+        baseMat = mats.anodizedGold
       } else if (matName.includes('bronze')) {
-        child.material = mats.titaniumExhaust
+        baseMat = mats.titaniumExhaust
       } else if (matName.includes('rim_second')) {
-        child.material = mats.wheelRim
+        baseMat = mats.wheelRim
       } else if (matName.includes('mattemetal') || matName.includes('gray')) {
-        child.material = mats.engineMetal
+        baseMat = mats.engineMetal
+      }
+
+      const partId = meshToPartId.get(normalizeMeshKey(exactName))
+      if (partId) {
+        // Clone material once for this clickable part so highlighting affects ONLY this part
+        const isolatedMat = baseMat.clone()
+        allDisposables.push(isolatedMat)
+        child.material = isolatedMat
+        child.userData.partId = partId
+
+        if (child.geometry) {
+          child.geometry.computeBoundingBox()
+          child.geometry.computeBoundingSphere()
+        }
+
+        partMats[partId].push({
+          mat: isolatedMat,
+          baseEmissive: isolatedMat.emissive.clone(),
+          baseEmissiveIntensity: isolatedMat.emissiveIntensity || 0,
+        })
+
+        clickableMeshList.push(child)
       } else {
-        child.material = mats.darkChassis
+        child.material = baseMat
       }
     })
 
-    return { model: clone, createdMaterials: Object.values(mats) }
+    return {
+      model: clone,
+      createdMaterials: allDisposables,
+      clickableMeshes: clickableMeshList,
+      partMaterialsMap: partMats,
+      partAnchorsMap: partAnchors,
+      partHighlightLevels: highlightLevels,
+    }
   }, [scene, gl])
+
+  // Expose imperative zero-allocation raycaster & part projection helper on interactionRef
+  useEffect(() => {
+    if (!interactionRef) return
+    interactionRef.current = {
+      raycastClientXY: (clientX, clientY) => {
+        if (!gl?.domElement || !camera || clickableMeshes.length === 0) return null
+        const rect = gl.domElement.getBoundingClientRect()
+        if (rect.width <= 0 || rect.height <= 0) return null
+
+        _ndcVec.x = ((clientX - rect.left) / rect.width) * 2 - 1
+        _ndcVec.y = -((clientY - rect.top) / rect.height) * 2 + 1
+
+        _raycaster.setFromCamera(_ndcVec, camera)
+        const hits = _raycaster.intersectObjects(clickableMeshes, false)
+        if (hits.length > 0) {
+          return hits[0].object?.userData?.partId || null
+        }
+        return null
+      },
+      getPartClientXY: (partId) => {
+        const grp = groupRef.current
+        const anchor = partAnchorsMap[partId]
+        if (!grp || !anchor || !gl?.domElement || !camera) return null
+        grp.updateMatrixWorld()
+        const rect = gl.domElement.getBoundingClientRect()
+        _projVec.copy(anchor).applyMatrix4(grp.matrixWorld).project(camera)
+        return {
+          clientX: rect.left + (_projVec.x * 0.5 + 0.5) * rect.width,
+          clientY: rect.top + (-_projVec.y * 0.5 + 0.5) * rect.height,
+        }
+      },
+      getHighlightLevels: () => ({ ...partHighlightLevels }),
+    }
+  }, [interactionRef, gl, camera, clickableMeshes, partAnchorsMap, partHighlightLevels])
 
   // Bind spotlight target & notify parent that model is ready for shader pre-compile
   useEffect(() => {
@@ -299,33 +419,130 @@ export default function MotorcycleModel({ cinematicStateRef, onModelReady }) {
     }
   }, [createdMaterials])
 
-  // Frame-rate-independent damping via THREE.MathUtils.damp (zero allocations)
+  // Frame-rate-independent damping, 360° rotation, part highlights & screen projection (zero allocations)
   useFrame((state, rawDelta) => {
-    if (!groupRef.current || !cinematicStateRef.current) return
+    const grp = groupRef.current
+    const s = cinematicStateRef?.current
+    if (!grp || !s) return
 
     const dt = Math.min(rawDelta, 0.05)
-    const s = cinematicStateRef.current
-    const lambda = 6.5
+    const {
+      dampingLambda,
+      inertiaDecayLambda,
+      autoRotateResumeDelayMs,
+      hoverResumeDelayMs,
+      hoverPauseRampLambda,
+      autoRotateRampLambda,
+    } = CINEMATIC_CONFIG.rotation
 
-    // Damp motorcycle world position
-    const pos = groupRef.current.position
-    pos.x = THREE.MathUtils.damp(pos.x, s.bikeX ?? 0, lambda, dt)
-    pos.y = THREE.MathUtils.damp(pos.y, s.bikeY ?? 0, lambda, dt)
-    pos.z = THREE.MathUtils.damp(pos.z, s.bikeZ ?? -14, lambda, dt)
+    // 1. World Position Damping
+    const targetX = s.bikeX ?? SHOWCASE_BIKE_POS[0]
+    const targetY = s.bikeY ?? SHOWCASE_BIKE_POS[1]
+    const targetZ = s.bikeZ ?? SHOWCASE_BIKE_POS[2]
 
-    // Damp motorcycle rotation
-    const rot = groupRef.current.rotation
-    rot.x = THREE.MathUtils.damp(rot.x, s.bikeRotX ?? 0, lambda, dt)
-    rot.y = THREE.MathUtils.damp(rot.y, s.bikeRotY ?? 0, lambda, dt)
-    rot.z = THREE.MathUtils.damp(rot.z, s.bikeRotZ ?? 0, lambda, dt)
+    if (prefersReducedMotion) {
+      grp.position.set(targetX, targetY, targetZ)
+    } else {
+      grp.position.x = THREE.MathUtils.damp(grp.position.x, targetX, 8.5, dt)
+      grp.position.y = THREE.MathUtils.damp(grp.position.y, targetY, 8.5, dt)
+      grp.position.z = THREE.MathUtils.damp(grp.position.z, targetZ, 8.5, dt)
+    }
 
-    // Damp headlight spotlight, bulb pointLight, and lens emissive intensity
-    const targetHl = s.headlightIntensity ?? 2.2
+    // 2. Phase 1 vs Phase 2 Rotation Logic
+    if (s.phase === 'showcase') {
+      if (prefersReducedMotion) {
+        // Static showcase pose; drag still works directly without inertia or auto-rotate
+        s.dragVelocity = 0
+        s.autoRotateSpeed = 0
+        s.currentRotY = s.targetRotY
+      } else {
+        if (!s.isDragging) {
+          // Exponential decay of release drag momentum
+          if (Math.abs(s.dragVelocity) > 0.0005) {
+            s.targetRotY += s.dragVelocity * dt
+            s.dragVelocity = THREE.MathUtils.damp(
+              s.dragVelocity,
+              0,
+              inertiaDecayLambda,
+              dt
+            )
+          } else {
+            s.dragVelocity = 0
+          }
+
+          // Slow cinematic auto-rotate (~20s/revolution):
+          // Pauses immediately when pointer hovers over the canvas/model (desktop/mouse),
+          // and resumes after hoverResumeDelayMs (1.25s) once pointer leaves
+          const now = performance.now()
+          const idleMs = now - (s.lastInteractionAt || 0)
+          const hoverLeaveMs =
+            s.lastHoverLeaveAt > 0 ? now - s.lastHoverLeaveAt : Infinity
+          const isPausedByHover =
+            Boolean(s.isPointerHovering) || hoverLeaveMs < hoverResumeDelayMs
+          const canAutoRotate =
+            idleMs >= autoRotateResumeDelayMs && !isPausedByHover
+          const targetAutoSpeed = canAutoRotate ? AUTO_ROTATE_SPEED : 0
+          const rampLambda = isPausedByHover
+            ? hoverPauseRampLambda
+            : autoRotateRampLambda
+
+          s.autoRotateSpeed = THREE.MathUtils.damp(
+            s.autoRotateSpeed || 0,
+            targetAutoSpeed,
+            rampLambda,
+            dt
+          )
+
+          const autoDelta = s.autoRotateSpeed * dt
+          s.targetRotY += autoDelta
+          s.currentRotY += autoDelta
+        } else {
+          s.autoRotateSpeed = 0
+        }
+
+        s.currentRotY = THREE.MathUtils.damp(
+          s.currentRotY,
+          s.targetRotY,
+          dampingLambda,
+          dt
+        )
+      }
+
+      s.bikeRotY = s.currentRotY
+      grp.rotation.x = THREE.MathUtils.damp(
+        grp.rotation.x,
+        SHOWCASE_BIKE_ROTATION[0],
+        8.5,
+        dt
+      )
+      grp.rotation.y = s.currentRotY
+      grp.rotation.z = THREE.MathUtils.damp(
+        grp.rotation.z,
+        SHOWCASE_BIKE_ROTATION[2],
+        8.5,
+        dt
+      )
+    } else {
+      // Phase 1 Approach: Smoothly damp toward ScrollTrigger timeline rotation
+      s.currentRotY = THREE.MathUtils.damp(
+        s.currentRotY,
+        s.bikeRotY ?? 0,
+        8.5,
+        dt
+      )
+      s.targetRotY = s.currentRotY
+      grp.rotation.x = THREE.MathUtils.damp(grp.rotation.x, s.bikeRotX ?? 0, 8.5, dt)
+      grp.rotation.y = s.currentRotY
+      grp.rotation.z = THREE.MathUtils.damp(grp.rotation.z, s.bikeRotZ ?? 0, 8.5, dt)
+    }
+
+    // 3. Headlight intensity damping
+    const targetHl = s.headlightIntensity ?? 4.8
     if (headlightLightRef.current) {
       headlightLightRef.current.intensity = THREE.MathUtils.damp(
         headlightLightRef.current.intensity,
         targetHl,
-        lambda,
+        6.5,
         dt
       )
     }
@@ -333,7 +550,7 @@ export default function MotorcycleModel({ cinematicStateRef, onModelReady }) {
       headlightBulbRef.current.intensity = THREE.MathUtils.damp(
         headlightBulbRef.current.intensity,
         targetHl * 0.45,
-        lambda,
+        6.5,
         dt
       )
     }
@@ -341,9 +558,80 @@ export default function MotorcycleModel({ cinematicStateRef, onModelReady }) {
       headlightMatRef.current.emissiveIntensity = THREE.MathUtils.damp(
         headlightMatRef.current.emissiveIntensity,
         1.4 + targetHl * 0.25,
-        lambda,
+        6.5,
         dt
       )
+    }
+
+    // 4. Per-part hover / selection emissive glow (only highlights active part)
+    const activeHoverId = s.phase === 'showcase' ? s.hoveredPartId : null
+    const activeSelectedId = s.phase === 'showcase' ? s.selectedPartId : null
+
+    for (let i = 0; i < CLICKABLE_PARTS.length; i++) {
+      const partId = CLICKABLE_PARTS[i].id
+      const isHighlighted = partId === activeHoverId || partId === activeSelectedId
+      const targetLevel = isHighlighted ? 1.0 : 0.0
+      const prevLevel = partHighlightLevels[partId]
+
+      if (Math.abs(prevLevel - targetLevel) > 0.001 || targetLevel > 0) {
+        const nextLevel = prefersReducedMotion
+          ? targetLevel
+          : THREE.MathUtils.damp(prevLevel, targetLevel, 12.0, dt)
+        partHighlightLevels[partId] = nextLevel
+
+        const matEntries = partMaterialsMap[partId]
+        for (let m = 0; m < matEntries.length; m++) {
+          const entry = matEntries[m]
+          entry.mat.emissive.lerpColors(
+            entry.baseEmissive,
+            _orangeHighlightColor,
+            nextLevel
+          )
+          entry.mat.emissiveIntensity = THREE.MathUtils.lerp(
+            entry.baseEmissiveIntensity,
+            2.1,
+            nextLevel
+          )
+        }
+      }
+    }
+
+    // 5. Screen-project 3D part anchors to 2D viewport coordinates for floating label & mobile dots
+    if (s.phase === 'showcase') {
+      grp.updateMatrixWorld()
+      const vw = state.size.width
+      const vh = state.size.height
+
+      // Update floating "Buy [Part Name] ->" label position if a part is selected
+      if (activeSelectedId && floatingLabelRef?.current) {
+        const anchor = partAnchorsMap[activeSelectedId]
+        if (anchor) {
+          _projVec.copy(anchor).applyMatrix4(grp.matrixWorld).project(state.camera)
+          const rawX = (_projVec.x * 0.5 + 0.5) * vw
+          const rawY = (-_projVec.y * 0.5 + 0.5) * vh
+          // Clamp inside viewport so label never overflows horizontally even at 375px
+          const clampedX = Math.max(92, Math.min(vw - 92, rawX))
+          const clampedY = Math.max(64, Math.min(vh - 56, rawY))
+          floatingLabelRef.current.style.transform = `translate3d(${clampedX.toFixed(1)}px, ${clampedY.toFixed(1)}px, 0) translate(-50%, -125%)`
+        }
+      }
+
+      // Update mobile hotspot pulsing dots positions
+      if (mobileDotRefs?.current) {
+        for (let i = 0; i < CLICKABLE_PARTS.length; i++) {
+          const partId = CLICKABLE_PARTS[i].id
+          const dotEl = mobileDotRefs.current[partId]
+          const anchor = partAnchorsMap[partId]
+          if (dotEl && anchor) {
+            _projVec.copy(anchor).applyMatrix4(grp.matrixWorld).project(state.camera)
+            const rawX = (_projVec.x * 0.5 + 0.5) * vw
+            const rawY = (-_projVec.y * 0.5 + 0.5) * vh
+            const clampedX = Math.max(20, Math.min(vw - 20, rawX))
+            const clampedY = Math.max(20, Math.min(vh - 20, rawY))
+            dotEl.style.transform = `translate3d(${clampedX.toFixed(1)}px, ${clampedY.toFixed(1)}px, 0) translate(-50%, -50%)`
+          }
+        }
+      }
     }
   })
 
