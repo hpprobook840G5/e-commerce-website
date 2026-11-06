@@ -6,7 +6,7 @@ import WhatsAppButton from '../components/common/WhatsAppButton.jsx'
 
 export default function MainLayout() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col overflow-x-hidden">
       <AnnouncementBar />
       <Navbar />
       <main className="flex-1">

@@ -1,0 +1,987 @@
+{
+  "_comment": "Temporary local data. Replace with API responses when backend is connected.",
+  "products": [
+    {
+      "id": "at-hl-01",
+      "name": "LumenPro 7\" Bi-LED Matrix Projector Headlight",
+      "slug": "lumenpro-7-bi-led-matrix-projector-headlight",
+      "category": "headlight",
+      "categoryName": "Headlights & Lighting",
+      "brand": "AirTouch Apex",
+      "compatibility": [
+        "KTM Duke 390",
+        "Kawasaki Z900",
+        "Royal Enfield Continental GT 650",
+        "Honda CB350RS",
+        "Royal Enfield Super Meteor 650",
+        "Royal Enfield Meteor 350"
+      ],
+      "price": 4999,
+      "mrp": 6499,
+      "originalPrice": 6499,
+      "stock": 24,
+      "rating": 4.9,
+      "reviewCount": 168,
+      "badges": [
+        "Sale -23%",
+        "Best Seller"
+      ],
+      "bikeType": [
+        "Naked Sport",
+        "Cafe Racer",
+        "Cruiser"
+      ],
+      "featured": true,
+      "shortDescription": "Aircraft-grade die-cast aluminum housing featuring dual high-intensity OSRAM LED chips with razor-sharp horizontal cut-off beam and integrated amber halo DRL.",
+      "description": "Aircraft-grade die-cast aluminum housing featuring dual high-intensity OSRAM LED chips with razor-sharp horizontal cut-off beam and integrated amber halo DRL.",
+      "specs": {
+        "LuminousFlux": "4800 High Beam / 3200 Low Beam (Lumens)",
+        "ColorTemperature": "6000K Pure White",
+        "WaterproofRating": "IP68 Submersible Sealed",
+        "Fitment": "Standard 7-inch Bucket (H4 / H13 Plug & Play)"
+      },
+      "image": "https://images.unsplash.com/photo-1558981420-87aa9dad1c89?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-hl-02",
+      "name": "Apex Hawk-Eye Dual LED Aerodynamic Headlight Pod",
+      "slug": "apex-hawk-eye-dual-led-aerodynamic-headlight-pod",
+      "category": "headlight",
+      "categoryName": "Headlights & Lighting",
+      "brand": "Rizoma Italy",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900"
+      ],
+      "price": 8999,
+      "mrp": 10999,
+      "originalPrice": 10999,
+      "stock": 9,
+      "rating": 4.8,
+      "reviewCount": 92,
+      "badges": [
+        "Sale -18%",
+        "New"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport"
+      ],
+      "featured": false,
+      "shortDescription": "Aggressive streetfighter-style twin projector setup with CNC anodized mounting bracket and integrated dynamic scrolling turn signals.",
+      "description": "Aggressive streetfighter-style twin projector setup with CNC anodized mounting bracket and integrated dynamic scrolling turn signals.",
+      "specs": {
+        "PowerConsumption": "65W High Performance",
+        "Voltage": "12V DC Regulated",
+        "LensMaterial": "Scratch-Proof Polycarbonate",
+        "Mounting": "Universal Fork Bracket (38mm - 54mm)"
+      },
+      "image": "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1558981420-87aa9dad1c89?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-hl-03",
+      "name": "RadarGlow Smart Accelerometer LED Brake & Tail Light",
+      "slug": "radarglow-smart-accelerometer-led-brake-tail-light",
+      "category": "headlight",
+      "categoryName": "Headlights & Lighting",
+      "brand": "AirTouch Apex",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900",
+        "Royal Enfield Himalayan 450",
+        "Hero Xpulse 200 4V",
+        "Royal Enfield Continental GT 650",
+        "Honda CB350RS"
+      ],
+      "price": 2499,
+      "mrp": 3199,
+      "originalPrice": 3199,
+      "stock": 35,
+      "rating": 4.7,
+      "reviewCount": 145,
+      "badges": [
+        "Sale -22%"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport",
+        "Adventure (ADV)",
+        "Cafe Racer"
+      ],
+      "featured": false,
+      "shortDescription": "Internal 3-axis G-sensor triggers an ultra-bright rapid strobe upon hard deceleration, giving trailing motorists instant warning before regular brake application.",
+      "description": "Internal 3-axis G-sensor triggers an ultra-bright rapid strobe upon hard deceleration, giving trailing motorists instant warning before regular brake application.",
+      "specs": {
+        "Technology": "Integrated Kinetic Deceleration Sensor",
+        "VisibilityAngle": "220° Ultra-Wide Prism Optics",
+        "Casing": "CNC Smoked Lens Alloy Body",
+        "Wiring": "OEM Loom Plug & Play Harness Included"
+      },
+      "image": "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-ex-04",
+      "name": "Titan-X Full System Titanium Slip-On Exhaust",
+      "slug": "titan-x-full-system-titanium-slip-on-exhaust",
+      "category": "exhaust",
+      "categoryName": "Exhaust Systems",
+      "brand": "Akrapovič",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900"
+      ],
+      "price": 28999,
+      "mrp": 34999,
+      "originalPrice": 34999,
+      "stock": 6,
+      "rating": 5,
+      "reviewCount": 114,
+      "badges": [
+        "Sale -17%",
+        "Best Seller",
+        "Low Stock"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport"
+      ],
+      "featured": true,
+      "shortDescription": "Race-proven Grade 1 titanium canister with genuine dry carbon fiber end-cap and heat shield. Sheds 4.1 kg over stock mufflers with a deep, resonant acoustic signature.",
+      "description": "Race-proven Grade 1 titanium canister with genuine dry carbon fiber end-cap and heat shield. Sheds 4.1 kg over stock mufflers with a deep, resonant acoustic signature.",
+      "specs": {
+        "CanisterMaterial": "Hydroformed Seamless Titanium",
+        "EndCap": "Dry Carbon Fiber with UV Matte Clearcoat",
+        "PowerGain": "+4.8 HP @ 9,800 RPM",
+        "WeightReduction": "-4.1 kg vs OEM Exhaust"
+      },
+      "image": "https://images.unsplash.com/photo-1558980394-4c7c9299fe96?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1558981285-6f0c94958bb6?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-ex-05",
+      "name": "Yoshimura Alpha-T Stainless Decat Header Pipe",
+      "slug": "yoshimura-alpha-t-stainless-decat-header-pipe",
+      "category": "exhaust",
+      "categoryName": "Exhaust Systems",
+      "brand": "Yoshimura",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900",
+        "Royal Enfield Himalayan 450",
+        "Hero Xpulse 200 4V"
+      ],
+      "price": 14999,
+      "mrp": 17999,
+      "originalPrice": 17999,
+      "stock": 12,
+      "rating": 4.8,
+      "reviewCount": 78,
+      "badges": [
+        "Sale -16%"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport",
+        "Adventure (ADV)"
+      ],
+      "featured": false,
+      "shortDescription": "Mandrel-bent 304 austenitic stainless steel decat mid-pipe with robotic TIG welds. Optimizes gas exit velocity and eliminates heavy catalytic converters for track racing.",
+      "description": "Mandrel-bent 304 austenitic stainless steel decat mid-pipe with robotic TIG welds. Optimizes gas exit velocity and eliminates heavy catalytic converters for track racing.",
+      "specs": {
+        "Material": "AISI 304 Surgical Grade Stainless Steel",
+        "InletDiameter": "51mm Standard Slip Connection",
+        "O2SensorBung": "M18 x 1.5 with M12 Brass Reducer",
+        "Weight": "1.45 kg"
+      },
+      "image": "https://images.unsplash.com/photo-1558981285-6f0c94958bb6?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1558980394-4c7c9299fe96?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-ex-06",
+      "name": "AirTouch BlackEdition High-Volume Shorty Muffler",
+      "slug": "airtouch-blackedition-high-volume-shorty-muffler",
+      "category": "exhaust",
+      "categoryName": "Exhaust Systems",
+      "brand": "AirTouch Apex",
+      "compatibility": [
+        "Royal Enfield Continental GT 650",
+        "Honda CB350RS",
+        "Royal Enfield Super Meteor 650",
+        "Royal Enfield Meteor 350",
+        "KTM Duke 390",
+        "Kawasaki Z900"
+      ],
+      "price": 8499,
+      "mrp": 10499,
+      "originalPrice": 10499,
+      "stock": 20,
+      "rating": 4.7,
+      "reviewCount": 130,
+      "badges": [
+        "Sale -19%"
+      ],
+      "bikeType": [
+        "Cafe Racer",
+        "Cruiser",
+        "Naked Sport"
+      ],
+      "featured": false,
+      "shortDescription": "Ceramic matte black coated stainless shorty muffler with removable dual-stage acoustic dB-killer. Delivers throaty low-end growl without highway drone.",
+      "description": "Ceramic matte black coated stainless shorty muffler with removable dual-stage acoustic dB-killer. Delivers throaty low-end growl without highway drone.",
+      "specs": {
+        "Finish": "High-Temperature Ceramic Powdercoat (900°C)",
+        "Baffle": "Removable Dual Stage CNC Sound Insert",
+        "Clamp": "Stainless T-Bolt Mounting Clamp Included",
+        "Length": "340mm Compact Body"
+      },
+      "image": "https://images.unsplash.com/photo-1558980394-4c7c9299fe96?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1558981285-6f0c94958bb6?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-cl-07",
+      "name": "Rekluse TorqDrive Heavy-Duty Slipper Clutch Kit",
+      "slug": "rekluse-torqdrive-heavy-duty-slipper-clutch-kit",
+      "category": "clutch",
+      "categoryName": "Clutch & Gearbox",
+      "brand": "Rekluse Clutch",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900",
+        "Royal Enfield Himalayan 450",
+        "Hero Xpulse 200 4V"
+      ],
+      "price": 18499,
+      "mrp": 21999,
+      "originalPrice": 21999,
+      "stock": 8,
+      "rating": 5,
+      "reviewCount": 95,
+      "badges": [
+        "Best Seller",
+        "New"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport",
+        "Adventure (ADV)"
+      ],
+      "featured": true,
+      "shortDescription": "Race-spec back-torque limiting slipper clutch prevents aggressive rear-wheel hopping during aggressive downshifts entering corners. Eliminates clutch chatter.",
+      "description": "Race-spec back-torque limiting slipper clutch prevents aggressive rear-wheel hopping during aggressive downshifts entering corners. Eliminates clutch chatter.",
+      "specs": {
+        "FrictionPlates": "Thin-Friction Steel Core Pack (25% More Surface Area)",
+        "PressurePlate": "Hard Anodized 7075-T6 Billet Aluminum",
+        "RampAngle": "Dual-Stage 35° / 40° Deceleration Ramp",
+        "TorqueCapacity": "Up to 165 Nm Crankshaft Torque"
+      },
+      "image": "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1609630874987-a2f2672722b9?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-cl-08",
+      "name": "EBC Carbon-Kevlar Clutch Friction Disk & Steel Pack",
+      "slug": "ebc-carbon-kevlar-clutch-friction-disk-steel-pack",
+      "category": "clutch",
+      "categoryName": "Clutch & Gearbox",
+      "brand": "EBC Brakes",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900",
+        "Royal Enfield Super Meteor 650",
+        "Royal Enfield Meteor 350",
+        "Royal Enfield Continental GT 650",
+        "Honda CB350RS"
+      ],
+      "price": 4799,
+      "mrp": 5999,
+      "originalPrice": 5999,
+      "stock": 32,
+      "rating": 4.8,
+      "reviewCount": 210,
+      "badges": [
+        "Sale -20%"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport",
+        "Cruiser",
+        "Cafe Racer"
+      ],
+      "featured": false,
+      "shortDescription": "High-friction carbon-Kevlar impregnated segments bonded to tempered alloy cores with heavy-duty diaphragm clutch springs. Resists slip under oil shearing temperatures.",
+      "description": "High-friction carbon-Kevlar impregnated segments bonded to tempered alloy cores with heavy-duty diaphragm clutch springs. Resists slip under oil shearing temperatures.",
+      "specs": {
+        "LiningMaterial": "Carbon-Aramid Kevlar Composite",
+        "SetContents": "8 Friction Plates + 7 Dimpled Steel Plates + 6 HD Springs",
+        "SpringRate": "+15% Stiffer Than Stock Springs",
+        "OilCompatibility": "JASO MA / MA2 Wet Clutch Certified"
+      },
+      "image": "https://images.unsplash.com/photo-1609630874987-a2f2672722b9?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-cl-09",
+      "name": "Apex Close-Ratio 6-Speed Hardened Transmission Gearset",
+      "slug": "apex-close-ratio-6-speed-hardened-transmission-gearset",
+      "category": "clutch",
+      "categoryName": "Clutch & Gearbox",
+      "brand": "AirTouch Apex",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900"
+      ],
+      "price": 24999,
+      "mrp": 29999,
+      "originalPrice": 29999,
+      "stock": 5,
+      "rating": 4.9,
+      "reviewCount": 42,
+      "badges": [
+        "Sale -17%",
+        "Low Stock"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport"
+      ],
+      "featured": true,
+      "shortDescription": "CNC hobbed from case-hardened 8620 nickel-chromium steel with micro-polished dog teeth. Tighter 2nd-through-5th gear ratios keep engine continuously in powerband.",
+      "description": "CNC hobbed from case-hardened 8620 nickel-chromium steel with micro-polished dog teeth. Tighter 2nd-through-5th gear ratios keep engine continuously in powerband.",
+      "specs": {
+        "SteelGrade": "AISI 8620 Vacuum Carburized Steel",
+        "ToothProfile": "Undercut 4-Dog Engagement Windows",
+        "SurfaceTreatment": "Isotropic Superfinish (REM Polished)",
+        "Compatibility": "Direct fit for standard crankcase splines"
+      },
+      "image": "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-cl-10",
+      "name": "Translogic Bi-Directional Quickshifter & Auto-Blipper",
+      "slug": "translogic-bi-directional-quickshifter-auto-blipper",
+      "category": "clutch",
+      "categoryName": "Clutch & Gearbox",
+      "brand": "AirTouch Apex",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900"
+      ],
+      "price": 19999,
+      "mrp": 23999,
+      "originalPrice": 23999,
+      "stock": 14,
+      "rating": 4.9,
+      "reviewCount": 88,
+      "badges": [
+        "Sale -17%"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport"
+      ],
+      "featured": false,
+      "shortDescription": "Intelligent dual-channel strain gauge sensor mounts directly to the shift linkage, cutting ignition for seamless full-throttle upshifts and auto-blipping downshifts without the clutch.",
+      "description": "Intelligent dual-channel strain gauge sensor mounts directly to the shift linkage, cutting ignition for seamless full-throttle upshifts and auto-blipping downshifts without the clutch.",
+      "specs": {
+        "SensorType": "Digital Micro-Strain Gauge (Dual Direction)",
+        "KillTime": "Adaptive 42ms - 65ms per gear RPM",
+        "Harness": "Direct ignition coil tap loom included",
+        "Waterproofing": "Hermetically Sealed IP67 Casing"
+      },
+      "image": "https://images.unsplash.com/photo-1609630875171-b1321377ee65?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-br-11",
+      "name": "Brembo Stylema 100mm Monobloc Caliper Pair",
+      "slug": "brembo-stylema-100mm-monobloc-caliper-pair",
+      "category": "brakes",
+      "categoryName": "Brakes & Hydraulics",
+      "brand": "Brembo Racing",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900"
+      ],
+      "price": 36999,
+      "mrp": 42999,
+      "originalPrice": 42999,
+      "stock": 4,
+      "rating": 5,
+      "reviewCount": 83,
+      "badges": [
+        "Best Seller",
+        "Low Stock"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport"
+      ],
+      "featured": true,
+      "shortDescription": "Flagship cast/forged monobloc radial caliper pairing 30mm titanium pistons with direct fluid channels. Delivers benchmark feedback and cooling on 300+ km/h circuit straights.",
+      "description": "Flagship cast/forged monobloc radial caliper pairing 30mm titanium pistons with direct fluid channels. Delivers benchmark feedback and cooling on 300+ km/h circuit straights.",
+      "specs": {
+        "Pistons": "4 x 30mm Ventilated Titanium Alloy",
+        "MountingRadial": "100mm Hole Center (Superbike Standard)",
+        "BrakeFluid": "Compatible with DOT 4 / 5.1 Racing Fluid",
+        "Weight": "860g per caliper with pads"
+      },
+      "image": "https://images.unsplash.com/photo-1547549082-6bc09f2049ae?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-br-12",
+      "name": "Apex-R T-Drive 320mm Floating Front Brake Disc",
+      "slug": "apex-r-t-drive-320mm-floating-front-brake-disc",
+      "category": "brakes",
+      "categoryName": "Brakes & Hydraulics",
+      "brand": "AirTouch Apex",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900",
+        "Royal Enfield Continental GT 650",
+        "Honda CB350RS"
+      ],
+      "price": 8999,
+      "mrp": 11499,
+      "originalPrice": 11499,
+      "stock": 16,
+      "rating": 4.9,
+      "reviewCount": 128,
+      "badges": [
+        "Sale -22%"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport",
+        "Cafe Racer"
+      ],
+      "featured": false,
+      "shortDescription": "Floating brake rotor utilizing 8 patented T-Drive guillotine pins instead of circular bobbins to transfer braking torque efficiently from outer rotor to CNC carrier.",
+      "description": "Floating brake rotor utilizing 8 patented T-Drive guillotine pins instead of circular bobbins to transfer braking torque efficiently from outer rotor to CNC carrier.",
+      "specs": {
+        "OuterDiameter": "320mm / 5.5mm Race Thickness",
+        "RotorRing": "High-Carbon Heat-Treated Martensitic Steel",
+        "Carrier": "Billet 7075-T6 Anodized Hard Gold",
+        "ThermalRating": "Tested to 750°C without warpage"
+      },
+      "image": "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1547549082-6bc09f2049ae?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-br-13",
+      "name": "EBC Double-H Sintered Superbike Front Brake Pads",
+      "slug": "ebc-double-h-sintered-superbike-front-brake-pads",
+      "category": "brakes",
+      "categoryName": "Brakes & Hydraulics",
+      "brand": "EBC Brakes",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900",
+        "Royal Enfield Himalayan 450",
+        "Hero Xpulse 200 4V",
+        "Royal Enfield Super Meteor 650",
+        "Royal Enfield Meteor 350"
+      ],
+      "price": 2699,
+      "mrp": 3299,
+      "originalPrice": 3299,
+      "stock": 48,
+      "rating": 4.8,
+      "reviewCount": 310,
+      "badges": [
+        "Best Seller"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport",
+        "Adventure (ADV)",
+        "Cruiser"
+      ],
+      "featured": false,
+      "shortDescription": "Ultra-high friction copper alloy sintered formulation. Provides aggressive initial bite, zero brake fade, and stainless steel radiator heat shields to insulate caliper seals.",
+      "description": "Ultra-high friction copper alloy sintered formulation. Provides aggressive initial bite, zero brake fade, and stainless steel radiator heat shields to insulate caliper seals.",
+      "specs": {
+        "FrictionRating": "HH Friction Class (Highest road/track legal)",
+        "BackingPlate": "Perforated Stainless Heat Barrier",
+        "Compatibility": "Direct drop-in for Brembo, Nissin, Tokico calipers",
+        "Contents": "1 Pair (Covers 1 Front Rotor)"
+      },
+      "image": "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1547549082-6bc09f2049ae?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-en-14",
+      "name": "Apex High-Compression Forged Racing Piston Kit",
+      "slug": "apex-high-compression-forged-racing-piston-kit",
+      "category": "engine",
+      "categoryName": "Engine & Performance",
+      "brand": "AirTouch Apex",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900",
+        "Royal Enfield Continental GT 650",
+        "Honda CB350RS"
+      ],
+      "price": 13499,
+      "mrp": 16499,
+      "originalPrice": 16499,
+      "stock": 11,
+      "rating": 4.9,
+      "reviewCount": 54,
+      "badges": [
+        "Sale -18%",
+        "New"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport",
+        "Cafe Racer"
+      ],
+      "featured": true,
+      "shortDescription": "Forged from 2618 aerospace alloy with diamond-turned skirt profile and MOS2 anti-friction skirt coating. Bumps compression to 13.5:1 for peak torque response.",
+      "description": "Forged from 2618 aerospace alloy with diamond-turned skirt profile and MOS2 anti-friction skirt coating. Bumps compression to 13.5:1 for peak torque response.",
+      "specs": {
+        "BoreSize": "Std / +0.50mm Oversize Available",
+        "CompressionRatio": "13.5:1 High Compression Dome",
+        "WristPin": "DLC-Coated Tool Steel Pin included",
+        "Rings": "Nitrided Steel Top Ring & Chrome Napier Second"
+      },
+      "image": "https://images.unsplash.com/photo-1558980664-10e7170b5df9?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-en-15",
+      "name": "K&N High-Flow Washable Cotton Air Filter",
+      "slug": "k-n-high-flow-washable-cotton-air-filter",
+      "category": "engine",
+      "categoryName": "Engine & Performance",
+      "brand": "K&N Engineering",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900",
+        "Royal Enfield Himalayan 450",
+        "Hero Xpulse 200 4V",
+        "Royal Enfield Super Meteor 650",
+        "Royal Enfield Meteor 350"
+      ],
+      "price": 4299,
+      "mrp": 4999,
+      "originalPrice": 4999,
+      "stock": 45,
+      "rating": 4.8,
+      "reviewCount": 260,
+      "badges": [
+        "Best Seller"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport",
+        "Adventure (ADV)",
+        "Cruiser"
+      ],
+      "featured": false,
+      "shortDescription": "Four layers of pleated surgical cotton gauze sandwiched between epoxy-coated wire mesh. Increases air intake CFM by 28% while trapping 99% of particulate dust.",
+      "description": "Four layers of pleated surgical cotton gauze sandwiched between epoxy-coated wire mesh. Increases air intake CFM by 28% while trapping 99% of particulate dust.",
+      "specs": {
+        "Media": "Multi-layered Pre-Oiled Cotton Gauze",
+        "Reusable": "Washable & Reusable for 1 Million Miles",
+        "Gasket": "High-Temperature Urethane Perimeter Seal",
+        "Installation": "Direct Drop-in Replacement for OEM Airbox"
+      },
+      "image": "https://images.unsplash.com/photo-1558980664-10e7170b5df9?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-en-16",
+      "name": "Dynojet Power Commander V Piggyback ECU Module",
+      "slug": "dynojet-power-commander-v-piggyback-ecu-module",
+      "category": "engine",
+      "categoryName": "Engine & Performance",
+      "brand": "AirTouch Apex",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900",
+        "Royal Enfield Himalayan 450",
+        "Hero Xpulse 200 4V"
+      ],
+      "price": 21999,
+      "mrp": 25999,
+      "originalPrice": 25999,
+      "stock": 7,
+      "rating": 4.9,
+      "reviewCount": 72,
+      "badges": [
+        "Sale -15%",
+        "Low Stock"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport",
+        "Adventure (ADV)"
+      ],
+      "featured": false,
+      "shortDescription": "Allows cylinder-selective fuel mapping and ignition timing adjustment. Connects inline with factory wiring harness and supports switchable rain/track engine maps.",
+      "description": "Allows cylinder-selective fuel mapping and ignition timing adjustment. Connects inline with factory wiring harness and supports switchable rain/track engine maps.",
+      "specs": {
+        "MappingChannels": "Dual Fuel & Timing Tables per Cylinder",
+        "Inputs": "Speed, Gear Position, Throttle % (0-100)",
+        "MapStorage": "Dual Onboard Memory Profiles (Handlebar Switchable)",
+        "Software": "USB-C Windows / Mac Tuning Utility"
+      },
+      "image": "https://images.unsplash.com/photo-1609630875171-b1321377ee65?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1558980664-10e7170b5df9?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-hb-17",
+      "name": "Rizoma 3D CNC Billet Adjustable Clutch & Brake Levers",
+      "slug": "rizoma-3d-cnc-billet-adjustable-clutch-brake-levers",
+      "category": "handlebars",
+      "categoryName": "Handlebars & Controls",
+      "brand": "Rizoma Italy",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900",
+        "Royal Enfield Continental GT 650",
+        "Honda CB350RS"
+      ],
+      "price": 6999,
+      "mrp": 8499,
+      "originalPrice": 8499,
+      "stock": 25,
+      "rating": 4.9,
+      "reviewCount": 180,
+      "badges": [
+        "Sale -18%",
+        "Best Seller"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport",
+        "Cafe Racer"
+      ],
+      "featured": true,
+      "shortDescription": "Machined from solid billet aluminum blocks with laser-etched span indexing dials. Features folding hinge to prevent snapping off during track low-side slides.",
+      "description": "Machined from solid billet aluminum blocks with laser-etched span indexing dials. Features folding hinge to prevent snapping off during track low-side slides.",
+      "specs": {
+        "Adjustability": "6-Position Rotary Cam Dial for Finger Reach",
+        "HingeSafety": "90° Fold-Up Breakaway Tip with Aero Cutout",
+        "Material": "Anticorodal 6082-T6 Billet Aluminum",
+        "Finish": "Hard Anodized Titanium Grey with Orange Dial"
+      },
+      "image": "https://images.unsplash.com/photo-1609630875171-b1321377ee65?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1576435728678-68d0fbf94e91?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-hb-18",
+      "name": "AeroGrip 50mm CNC Clip-On Handlebar Assembly",
+      "slug": "aerogrip-50mm-cnc-clip-on-handlebar-assembly",
+      "category": "handlebars",
+      "categoryName": "Handlebars & Controls",
+      "brand": "AirTouch Apex",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "Royal Enfield Continental GT 650",
+        "Honda CB350RS"
+      ],
+      "price": 5499,
+      "mrp": 6799,
+      "originalPrice": 6799,
+      "stock": 18,
+      "rating": 4.8,
+      "reviewCount": 110,
+      "badges": [
+        "Sale -19%"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Cafe Racer"
+      ],
+      "featured": false,
+      "shortDescription": "Direct fork clamp clip-ons with 7-degree downward ergonomic drop angle. Hollow replaceable handlebar tubes machined with internal bar-end weight threads.",
+      "description": "Direct fork clamp clip-ons with 7-degree downward ergonomic drop angle. Hollow replaceable handlebar tubes machined with internal bar-end weight threads.",
+      "specs": {
+        "ClampDiameter": "50mm (Standard USD Fork Stanchion)",
+        "BarDiameter": "22.2mm (7/8\" Standard Throttle & Switchgear)",
+        "BarAngle": "7° Fixed Downswept Race Angle",
+        "Weight": "620g pair complete"
+      },
+      "image": "https://images.unsplash.com/photo-1576435728678-68d0fbf94e91?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1609630875171-b1321377ee65?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-hb-19",
+      "name": "Apex Stealth CNC Billet Bar-End Mirrors (Pair)",
+      "slug": "apex-stealth-cnc-billet-bar-end-mirrors-pair",
+      "category": "handlebars",
+      "categoryName": "Handlebars & Controls",
+      "brand": "Rizoma Italy",
+      "compatibility": [
+        "KTM Duke 390",
+        "Kawasaki Z900",
+        "Royal Enfield Continental GT 650",
+        "Honda CB350RS",
+        "Royal Enfield Super Meteor 650",
+        "Royal Enfield Meteor 350"
+      ],
+      "price": 3899,
+      "mrp": 4799,
+      "originalPrice": 4799,
+      "stock": 30,
+      "rating": 4.7,
+      "reviewCount": 195,
+      "badges": [
+        "Sale -19%"
+      ],
+      "bikeType": [
+        "Naked Sport",
+        "Cafe Racer",
+        "Cruiser"
+      ],
+      "featured": false,
+      "shortDescription": "Ultra-low profile aerodynamic bar-end mirrors with glare-reducing convex blue tinted glass. Mounts inside hollow 13mm-18mm handlebar ends with expanding collets.",
+      "description": "Ultra-low profile aerodynamic bar-end mirrors with glare-reducing convex blue tinted glass. Mounts inside hollow 13mm-18mm handlebar ends with expanding collets.",
+      "specs": {
+        "Glass": "Convex Anti-Glare Blue Tinted (30% Wider Field)",
+        "Articulation": "360° Ball Joint Pivot with Locking Grub Screw",
+        "Casing": "CNC Forged 6061 Aluminum with Satin Finish",
+        "Package": "Complete Pair (Left + Right with Mounting Hardware)"
+      },
+      "image": "https://images.unsplash.com/photo-1609630875171-b1321377ee65?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-st-20",
+      "name": "ErgoTrack Alcantara Gel Touring Rider Seat",
+      "slug": "ergotrack-alcantara-gel-touring-rider-seat",
+      "category": "seat",
+      "categoryName": "Seats & Bodywork",
+      "brand": "AirTouch Apex",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900",
+        "Royal Enfield Himalayan 450",
+        "Hero Xpulse 200 4V"
+      ],
+      "price": 7499,
+      "mrp": 9299,
+      "originalPrice": 9299,
+      "stock": 15,
+      "rating": 4.9,
+      "reviewCount": 142,
+      "badges": [
+        "Sale -19%",
+        "Best Seller"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport",
+        "Adventure (ADV)"
+      ],
+      "featured": true,
+      "shortDescription": "Hand-stitched synthetic Alcantara suede with waterproof internal membranes and medical-grade silicone gel core. Relieves pressure hotspots on 600km touring days.",
+      "description": "Hand-stitched synthetic Alcantara suede with waterproof internal membranes and medical-grade silicone gel core. Relieves pressure hotspots on 600km touring days.",
+      "specs": {
+        "Cover": "Weather-Resistant Alcantara with Orange Diamond Stitching",
+        "Padding": "Dual-Density Closed-Cell Memory Foam + Silicone Gel Pad",
+        "BasePlate": "Thermoformed High-Impact ABS Plastic",
+        "Weight": "1.2 kg complete assembly"
+      },
+      "image": "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-st-21",
+      "name": "Apex Carbon Fiber Monocoque Rear Pillion Seat Cowl",
+      "slug": "apex-carbon-fiber-monocoque-rear-pillion-seat-cowl",
+      "category": "seat",
+      "categoryName": "Seats & Bodywork",
+      "brand": "AirTouch Apex",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900"
+      ],
+      "price": 5999,
+      "mrp": 7499,
+      "originalPrice": 7499,
+      "stock": 10,
+      "rating": 4.8,
+      "reviewCount": 67,
+      "badges": [
+        "Sale -20%",
+        "New"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport"
+      ],
+      "featured": false,
+      "shortDescription": "Converts dual-seater tail into aggressive single-seater track profile in seconds. Molded from 100% pre-preg 3K twill carbon fiber with factory-matched locking latch.",
+      "description": "Converts dual-seater tail into aggressive single-seater track profile in seconds. Molded from 100% pre-preg 3K twill carbon fiber with factory-matched locking latch.",
+      "specs": {
+        "Weave": "Autoclave Pre-Preg 3K Twill Carbon Fiber",
+        "Clearcoat": "Automotive High-Gloss UV Protective Lacquer",
+        "Hardware": "OEM Key Latch Mechanism Integrated",
+        "Weight": "280 grams"
+      },
+      "image": "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-tr-22",
+      "name": "Pirelli Diablo Rosso IV Corsa Radial Front Tire (120/70-ZR17)",
+      "slug": "pirelli-diablo-rosso-iv-corsa-radial-front-tire-120-70-zr17",
+      "category": "tires",
+      "categoryName": "Tires & Wheels",
+      "brand": "Pirelli Moto",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900"
+      ],
+      "price": 9499,
+      "mrp": 11299,
+      "originalPrice": 11299,
+      "stock": 22,
+      "rating": 5,
+      "reviewCount": 220,
+      "badges": [
+        "Best Seller"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport"
+      ],
+      "featured": true,
+      "shortDescription": "Dual compound silica and carbon black mix provides immediate warmup, razor-sharp lean transition grip, and wet braking security for sport and aggressive street riding.",
+      "description": "Dual compound silica and carbon black mix provides immediate warmup, razor-sharp lean transition grip, and wet braking security for sport and aggressive street riding.",
+      "specs": {
+        "Size": "120/70 ZR 17 M/C (58W) TL",
+        "Compound": "100% Full Silica Central + Carbon-Black Shoulder Slick Area",
+        "TreadPattern": "Flash Groove Geometry for Quick Water Dispersal",
+        "SpeedRating": "(W) 270+ km/h Max Permitted Speed"
+      },
+      "image": "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-tr-23",
+      "name": "Pirelli Diablo Rosso IV Rear Radial Tire (180/55-ZR17)",
+      "slug": "pirelli-diablo-rosso-iv-rear-radial-tire-180-55-zr17",
+      "category": "tires",
+      "categoryName": "Tires & Wheels",
+      "brand": "Pirelli Moto",
+      "compatibility": [
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "KTM Duke 390",
+        "Kawasaki Z900"
+      ],
+      "price": 13999,
+      "mrp": 16499,
+      "originalPrice": 16499,
+      "stock": 18,
+      "rating": 4.9,
+      "reviewCount": 185,
+      "badges": [
+        "Sale -15%"
+      ],
+      "bikeType": [
+        "Superbike",
+        "Naked Sport"
+      ],
+      "featured": false,
+      "shortDescription": "Three-zone dual compound carcass rear tire featuring high-silica center band for touring mileage and 100% racing compound shoulders for knee-down corner exits.",
+      "description": "Three-zone dual compound carcass rear tire featuring high-silica center band for touring mileage and 100% racing compound shoulders for knee-down corner exits.",
+      "specs": {
+        "Size": "180/55 ZR 17 M/C (73W) TL",
+        "Structure": "Zero-Degree Steel Belt Radial Construction",
+        "ShoulderCompound": "Full Carbon Black Racing Slick Compound",
+        "Origin": "Made in Germany (Metzeler / Pirelli Group)"
+      },
+      "image": "https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "id": "at-ch-24",
+      "name": "Sentinel Tubular Steel Frame Crash Cage & Sliders",
+      "slug": "sentinel-tubular-steel-frame-crash-cage-sliders",
+      "category": "chassis",
+      "categoryName": "Chassis, Protection & Suspension",
+      "brand": "AirTouch Apex",
+      "compatibility": [
+        "KTM Duke 390",
+        "Kawasaki Z900",
+        "Yamaha YZF-R1",
+        "Kawasaki Ninja ZX-10R",
+        "Royal Enfield Himalayan 450",
+        "Hero Xpulse 200 4V"
+      ],
+      "price": 7999,
+      "mrp": 9999,
+      "originalPrice": 9999,
+      "stock": 14,
+      "rating": 4.9,
+      "reviewCount": 160,
+      "badges": [
+        "Sale -20%",
+        "Best Seller"
+      ],
+      "bikeType": [
+        "Naked Sport",
+        "Superbike",
+        "Adventure (ADV)"
+      ],
+      "featured": true,
+      "shortDescription": "Triangulated 1.25\" seamless cold-drawn DOM steel tubing with replaceable high-density Delrin sacrificial impact pucks. Protects crankcases and radiator during low-side spills.",
+      "description": "Triangulated 1.25\" seamless cold-drawn DOM steel tubing with replaceable high-density Delrin sacrificial impact pucks. Protects crankcases and radiator during low-side spills.",
+      "specs": {
+        "Tubing": "32mm DOM Seamless Carbon Steel (2.5mm Wall Thickness)",
+        "Pucks": "Replaceable CNC Billet Aluminum & Delrin Slider Heads",
+        "Coating": "Industrial UV Matte Black Powdercoat",
+        "Mounting": "Grade 10.9 High-Tensile Engine Bolts Included"
+      },
+      "image": "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80",
+      "secondaryImage": "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=80"
+    }
+  ]
+}

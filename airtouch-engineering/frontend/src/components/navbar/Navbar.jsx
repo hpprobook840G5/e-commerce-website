@@ -10,9 +10,12 @@ import {
   Menu,
   X,
   ArrowRight,
+  LogOut,
+  Package,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCartStore } from '../../store/cartStore.js'
+import { useAuth } from '../../context/AuthContext.jsx'
 
 /**
  * AirTouch Engineering - Premium Automotive Navigation Bar
@@ -20,6 +23,7 @@ import { useCartStore } from '../../store/cartStore.js'
 export default function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { user, signOut, isConfigured, admin } = useAuth()
 
   // Cart state
   const items = useCartStore((state) => state.items)
@@ -34,6 +38,10 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState('')
   const searchInputRef = useRef(null)
   const searchContainerRef = useRef(null)
+
+  // User avatar dropdown state (Desktop/Tablet)
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const userMenuRef = useRef(null)
 
   // Mobile menu drawer state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -134,10 +142,25 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isSearchOpen])
 
-  // Close mobile drawer on route change
+  // Close user dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setIsUserMenuOpen(false)
+      }
+    }
+
+    if (isUserMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isUserMenuOpen])
+
+  // Close mobile drawer and dropdowns on route change
   useEffect(() => {
     setIsMobileMenuOpen(false)
     setIsSearchOpen(false)
+    setIsUserMenuOpen(false)
   }, [location.pathname, location.hash])
 
   // Prevent background scroll when mobile drawer is open
@@ -152,12 +175,13 @@ export default function Navbar() {
     }
   }, [isMobileMenuOpen])
 
-  // Close search or drawer on Escape key
+  // Close modals on Escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         setIsSearchOpen(false)
         setIsMobileMenuOpen(false)
+        setIsUserMenuOpen(false)
       }
     }
     window.addEventListener('keydown', handleKeyDown)
@@ -176,7 +200,6 @@ export default function Navbar() {
   }
 
   // Navigation Links definition
-  // Note: 'About Us' links to /#about as no standalone /about route currently exists in AppRoutes.
   const navLinks = [
     { label: 'Home', path: '/' },
     { label: 'Products', path: '/products' },
@@ -193,6 +216,19 @@ export default function Navbar() {
     }
     return location.pathname.startsWith(item.path)
   }
+
+  const userInitial = (
+    user?.user_metadata?.full_name?.charAt(0) ||
+    user?.user_metadata?.name?.charAt(0) ||
+    user?.email?.charAt(0) ||
+    'U'
+  ).toUpperCase()
+
+  const userDisplayName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.email ||
+    'Customer'
 
   return (
     <header
@@ -311,19 +347,10 @@ export default function Navbar() {
             </button>
           </div>
 
-          {/* 2. Account / Login Link */}
-          <Link
-            to="/account"
-            aria-label="Customer Account & Orders"
-            title="Account"
-            className="p-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors focus:outline-none focus:ring-1 focus:ring-orange-500"
-          >
-            <User className="w-5 h-5" />
-          </Link>
-
-          {/* 3. Cart with Dynamic Count Badge */}
+          {/* 2. Cart with Dynamic Count Badge */}
           <Link
             to="/cart"
+            data-testid="navbar-cart-link"
             aria-label={`Shopping Cart with ${itemCount} items`}
             title="Shopping Cart"
             className="p-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors focus:outline-none focus:ring-1 focus:ring-orange-500 relative"
@@ -331,6 +358,7 @@ export default function Navbar() {
             <ShoppingCart className="w-5 h-5" />
             {itemCount > 0 && (
               <span
+                data-testid="navbar-cart-badge"
                 className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 text-[10px] font-black leading-none bg-orange-500 text-black rounded-full flex items-center justify-center shadow-sm pointer-events-none"
                 aria-hidden="true"
               >
@@ -339,7 +367,7 @@ export default function Navbar() {
             )}
           </Link>
 
-          {/* 4. Dark / Light Theme Toggle */}
+          {/* 3. Dark / Light Theme Toggle */}
           <button
             type="button"
             onClick={toggleTheme}
@@ -353,6 +381,109 @@ export default function Navbar() {
               <Moon className="w-5 h-5 text-orange-400" />
             )}
           </button>
+
+          {/* ================= 4. DESKTOP / TABLET AUTH BUTTONS OR AVATAR DROPDOWN ================= */}
+          <div className="hidden md:flex items-center gap-2 pl-1 border-l border-zinc-850">
+            {admin && (
+              <Link
+                to="/admin"
+                data-testid="navbar-admin-link"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-orange-500/10 border border-orange-500/40 text-orange-400 hover:bg-orange-500/20 text-xs font-bold uppercase tracking-wider transition-colors mr-1"
+              >
+                <span>Admin</span>
+              </Link>
+            )}
+            {user ? (
+              <div ref={userMenuRef} className="relative">
+                <button
+                  type="button"
+                  data-testid="navbar-avatar-button"
+                  onClick={() => setIsUserMenuOpen((prev) => !prev)}
+                  aria-label="Open user menu"
+                  aria-expanded={isUserMenuOpen}
+                  className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 text-black font-black text-sm flex items-center justify-center shadow-[0_0_12px_rgba(249,115,22,0.35)] hover:scale-105 transition-transform cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-zinc-950"
+                >
+                  {userInitial}
+                </button>
+
+                <AnimatePresence>
+                  {isUserMenuOpen && (
+                    <motion.div
+                      data-testid="navbar-user-dropdown"
+                      initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-2 w-52 bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl py-2 z-50 text-white"
+                    >
+                      <div className="px-4 py-2 border-b border-zinc-850">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-orange-500">
+                          Signed in as
+                        </p>
+                        <p className="text-xs font-semibold text-zinc-200 truncate mt-0.5">
+                          {userDisplayName}
+                        </p>
+                      </div>
+
+                      <div className="py-1">
+                        <Link
+                          to="/account"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-zinc-300 hover:text-white hover:bg-zinc-900 transition-colors"
+                        >
+                          <User className="w-4 h-4 text-orange-500" />
+                          <span>My Account</span>
+                        </Link>
+
+                        <Link
+                          to="/orders"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-zinc-300 hover:text-white hover:bg-zinc-900 transition-colors"
+                        >
+                          <Package className="w-4 h-4 text-orange-500" />
+                          <span>My Orders</span>
+                        </Link>
+                      </div>
+
+                      <div className="pt-1 border-t border-zinc-850">
+                        <button
+                          type="button"
+                          data-testid="navbar-logout-button"
+                          onClick={() => {
+                            setIsUserMenuOpen(false)
+                            signOut()
+                          }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-red-400 hover:text-red-300 hover:bg-zinc-900 transition-colors cursor-pointer"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span>Log Out</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/auth"
+                  data-testid="navbar-login-link"
+                  title={!isConfigured ? 'Supabase not configured in .env' : undefined}
+                  className="hidden lg:inline-flex items-center px-3 py-2 text-xs font-bold uppercase tracking-wider text-zinc-300 hover:text-white hover:bg-zinc-900 rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-orange-500"
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/auth"
+                  data-testid="navbar-signup-link"
+                  title={!isConfigured ? 'Supabase not configured in .env' : undefined}
+                  className="inline-flex items-center px-3.5 sm:px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-400 text-black font-extrabold text-xs uppercase tracking-wider transition-all shadow-[0_0_14px_rgba(249,115,22,0.3)] hover:shadow-[0_0_20px_rgba(249,115,22,0.45)] focus:outline-none focus:ring-2 focus:ring-orange-500"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
+          </div>
 
           {/* ================= MOBILE MENU BUTTON ================= */}
           <button
@@ -397,7 +528,77 @@ export default function Navbar() {
               className="relative z-40 md:hidden bg-zinc-950 border-b border-zinc-800 shadow-2xl overflow-hidden"
             >
               <div className="px-5 py-6 space-y-6">
-                {/* Mobile Search Input */}
+                {/* 0. Admin session indicator in mobile drawer if active */}
+                {admin && (
+                  <div className="p-3 bg-orange-500/10 border border-orange-500/30 rounded-xl flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-orange-500">
+                        Admin Authorized
+                      </p>
+                      <p className="text-xs font-semibold text-zinc-300 truncate max-w-[180px]">
+                        {admin.email}
+                      </p>
+                    </div>
+                    <Link
+                      to="/admin"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="px-3 py-1.5 bg-orange-500 hover:bg-orange-400 text-black font-extrabold text-xs uppercase tracking-wider rounded-lg transition-colors shadow-sm"
+                    >
+                      Console
+                    </Link>
+                  </div>
+                )}
+
+                {/* 1. Mobile Auth Header: Log In & Sign Up buttons or Logged-in Profile */}
+                {user ? (
+                  <div className="p-3.5 bg-zinc-900/80 border border-zinc-800 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 text-black font-black text-sm flex items-center justify-center shrink-0">
+                        {userInitial}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-orange-500">
+                          Logged In
+                        </p>
+                        <p className="text-xs font-semibold text-white truncate">
+                          {userDisplayName}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false)
+                        signOut()
+                      }}
+                      className="text-xs font-bold uppercase tracking-wider text-red-400 hover:text-red-300 px-2 py-1 rounded transition-colors"
+                    >
+                      Log Out
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <Link
+                      to="/auth"
+                      data-testid="mobile-login-link"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="w-full py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-zinc-850"
+                    >
+                      <User className="w-3.5 h-3.5 text-orange-500" />
+                      <span>Log In</span>
+                    </Link>
+                    <Link
+                      to="/auth"
+                      data-testid="mobile-signup-link"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="w-full py-2.5 rounded-lg bg-orange-500 text-black font-extrabold text-xs uppercase tracking-wider flex items-center justify-center shadow-md"
+                    >
+                      <span>Sign Up</span>
+                    </Link>
+                  </div>
+                )}
+
+                {/* 2. Mobile Search Input */}
                 <form onSubmit={handleSearchSubmit} className="relative">
                   <input
                     type="text"
@@ -416,7 +617,7 @@ export default function Navbar() {
                   </button>
                 </form>
 
-                {/* Primary Navigation Links */}
+                {/* 3. Primary Navigation Links */}
                 <nav className="flex flex-col space-y-2" aria-label="Mobile Navigation Links">
                   {navLinks.map((item) => {
                     const active = isLinkActive(item)
@@ -438,7 +639,7 @@ export default function Navbar() {
                   })}
                 </nav>
 
-                {/* Quick Account, Orders, and Cart Links */}
+                {/* 4. Quick Account, Orders, and Cart Links */}
                 <div className="pt-4 border-t border-zinc-900 grid grid-cols-2 gap-3">
                   <Link
                     to="/account"

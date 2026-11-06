@@ -13,6 +13,7 @@ import {
   Sun,
   Wrench,
   Zap,
+  ShoppingCart,
 } from 'lucide-react'
 import Badge from './Badge.jsx'
 import RatingStars from './RatingStars.jsx'
@@ -90,6 +91,7 @@ export default function ProductCard({
 }) {
   const shouldReduceMotion = useReducedMotion()
   const addItem = useCartStore((state) => state.addItem)
+  const items = useCartStore((state) => state.items)
 
   const id = product?.id ?? propId ?? 'part-unknown'
   const displayName = product?.name ?? propName ?? propTitle ?? 'AirTouch Component'
@@ -107,6 +109,11 @@ export default function ProductCard({
   const reviewCount = product?.reviewCount ?? propReviewCount ?? 45
   const badges = product?.badges ?? propBadges ?? (discountPercent ? [`Sale -${discountPercent}%`] : [])
   const bikeType = product?.bikeType ?? propBikeType ?? null
+  const stock = Number(product?.stock !== undefined ? product.stock : 15)
+  const isOutOfStock = stock <= 0
+
+  const cartItem = items.find((i) => (i.productId || i.id) === id)
+  const inCartQty = cartItem ? cartItem.quantity : 0
 
   const mainImage = product?.image ?? product?.imageUrl ?? propImage ?? propImageUrl
   const secondaryImage = product?.secondaryImage ?? propSecondaryImage ?? null
@@ -163,20 +170,12 @@ export default function ProductCard({
   const handleAddToCart = (e) => {
     e.preventDefault()
     e.stopPropagation()
-    const productPayload = product || {
-      id,
-      name: displayName,
-      brand,
-      category,
-      price,
-      originalPrice,
-      image: mainImage,
-    }
-    addItem(productPayload)
+    if (isOutOfStock) return
+    addItem(id, 1)
     setIsAdded(true)
     setTimeout(() => {
       setIsAdded(false)
-    }, 1800)
+    }, 1500)
   }
 
   const handleQuickViewClick = (e) => {
@@ -321,14 +320,38 @@ export default function ProductCard({
                 </button>
               )}
 
-              <GradientButton
-                size="sm"
-                isAdded={isAdded}
-                onClick={handleAddToCart}
-                className="shrink-0"
-              >
-                Add to Cart
-              </GradientButton>
+              {isOutOfStock ? (
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  className="px-3 py-1.5 text-xs min-h-[36px] uppercase tracking-wider font-bold rounded-lg bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50"
+                >
+                  Out of stock
+                </button>
+              ) : inCartQty > 0 ? (
+                <Link
+                  to="/cart"
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label={`In cart with quantity ${inCartQty}. Go to cart`}
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/15 border border-orange-500/50 hover:bg-orange-500/25 text-orange-400 hover:text-orange-300 font-bold text-xs uppercase tracking-wider transition-colors min-h-[36px]"
+                >
+                  <ShoppingCart className="w-3.5 h-3.5 text-orange-400" />
+                  <span>In cart · Qty {inCartQty}</span>
+                </Link>
+              ) : (
+                <GradientButton
+                  size="sm"
+                  isAdded={isAdded}
+                  onClick={handleAddToCart}
+                  className="shrink-0"
+                >
+                  Add to Cart
+                </GradientButton>
+              )}
+              <div className="sr-only" aria-live="polite">
+                {isAdded ? `${displayName} added to your cart.` : ''}
+              </div>
             </div>
           </div>
         </div>
@@ -475,15 +498,39 @@ export default function ProductCard({
               )}
             </div>
 
-            {/* Add to Cart Button */}
-            <GradientButton
-              size="sm"
-              fullWidth
-              isAdded={isAdded}
-              onClick={handleAddToCart}
-            >
-              Add to Cart
-            </GradientButton>
+            {/* Add to Cart / In Cart / Out of Stock Button */}
+            {isOutOfStock ? (
+              <button
+                type="button"
+                disabled
+                aria-disabled="true"
+                className="w-full px-3 py-2 text-xs min-h-[38px] uppercase tracking-wider font-bold rounded-lg bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50 flex items-center justify-center"
+              >
+                Out of stock
+              </button>
+            ) : inCartQty > 0 ? (
+              <Link
+                to="/cart"
+                onClick={(e) => e.stopPropagation()}
+                aria-label={`In cart with quantity ${inCartQty}. Go to cart`}
+                className="w-full px-3 py-2 text-xs min-h-[38px] uppercase tracking-wider font-extrabold rounded-lg bg-orange-500/15 border border-orange-500/50 hover:bg-orange-500/25 text-orange-400 hover:text-orange-300 flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <ShoppingCart className="w-3.5 h-3.5 text-orange-400" />
+                <span>In cart · Qty {inCartQty}</span>
+              </Link>
+            ) : (
+              <GradientButton
+                size="sm"
+                fullWidth
+                isAdded={isAdded}
+                onClick={handleAddToCart}
+              >
+                Add to Cart
+              </GradientButton>
+            )}
+            <div className="sr-only" aria-live="polite">
+              {isAdded ? `${displayName} added to your cart.` : ''}
+            </div>
           </div>
         </div>
       </div>

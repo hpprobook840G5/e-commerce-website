@@ -3,56 +3,29 @@
 import { useState, useEffect } from 'react'
 import { ArrowRight, MessageCircle, Phone } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion'
+import { CONTACT_INFO } from '../../../config/contactInfo.js'
 
 /**
- * Placeholder contact details for AirTouch Engineering.
- * TODO: Swap email, phone, head office address, and branch details with real production values.
+ * Contact details sourced from single source of truth (contactInfo.js)
  */
 export const CONTACT_CONFIG = {
   eyebrowLeft: 'SAY HELLO',
-  // TODO: Replace with real AirTouch Engineering support/sales email
-  email: {
-    user: 'hello',
-    domain: 'airtouchengineering.in',
-    full: 'hello@airtouchengineering.in',
-  },
-  description:
-    'Have a question about parts, compatibility, or bulk orders? Our team replies within one working day.',
-  // TODO: Replace with real AirTouch Engineering phone number
-  phone: {
-    display: '+91 90000 00000',
-    dial: '+919000000000',
-  },
+  email: CONTACT_INFO.email,
+  description: CONTACT_INFO.description,
+  phone: CONTACT_INFO.phone,
   eyebrowRight: 'HEAD OFFICE',
-  // TODO: Ask for the real AirTouch Engineering workshop/head office address and replace below
-  address: {
-    line1: 'Unit 14, Industrial Estate, NH-66 Bypass',
-    line2: 'Calicut, Kerala 673014, India',
-  },
-  workingHoursLabel: 'Mon–Sat · 9:30 am to 6:30 pm IST',
+  address: CONTACT_INFO.address,
+  workingHoursLabel: CONTACT_INFO.workingHours.label,
   branches: [
     {
       id: 'calicut-hq',
-      city: 'Calicut',
-      timeZone: 'Asia/Kolkata',
-      // Working days: Monday (1) through Saturday (6); Sunday (0) closed
-      workDays: [1, 2, 3, 4, 5, 6],
-      openMinutes: 9 * 60 + 30,  // 9:30 am
-      closeMinutes: 18 * 60 + 30, // 6:30 pm
-      openLabel: '9:30 am',
+      city: CONTACT_INFO.address.city,
+      timeZone: CONTACT_INFO.workingHours.timezone,
+      workDays: CONTACT_INFO.workingHours.workDays,
+      openMinutes: CONTACT_INFO.workingHours.openMinutes,
+      closeMinutes: CONTACT_INFO.workingHours.closeMinutes,
+      openLabel: CONTACT_INFO.workingHours.openTime,
     },
-    /*
-     * TODO: To add a second city/branch block later, uncomment and configure below:
-     * {
-     *   id: 'cochin-branch',
-     *   city: 'Kochi',
-     *   timeZone: 'Asia/Kolkata',
-     *   workDays: [1, 2, 3, 4, 5, 6],
-     *   openMinutes: 9 * 60 + 30,
-     *   closeMinutes: 18 * 60 + 30,
-     *   openLabel: '9:30 am',
-     * },
-     */
   ],
 }
 
