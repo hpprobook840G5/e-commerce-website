@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
   Heart,
@@ -89,6 +89,7 @@ export default function ProductCard({
   onQuickView,
   variants = DEFAULT_CARD_VARIANTS,
 }) {
+  const navigate = useNavigate()
   const shouldReduceMotion = useReducedMotion()
   const addItem = useCartStore((state) => state.addItem)
   const items = useCartStore((state) => state.items)
@@ -176,6 +177,14 @@ export default function ProductCard({
     setTimeout(() => {
       setIsAdded(false)
     }, 1500)
+  }
+
+  const handleBuyNow = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (isOutOfStock) return
+    addItem(product || id, 1)
+    navigate('/checkout')
   }
 
   const handleQuickViewClick = (e) => {
@@ -320,37 +329,73 @@ export default function ProductCard({
                 </button>
               )}
 
-              {isOutOfStock ? (
-                <button
-                  type="button"
-                  disabled
-                  aria-disabled="true"
-                  className="px-3 py-1.5 text-xs min-h-[36px] uppercase tracking-wider font-bold rounded-lg bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50"
-                >
-                  Out of stock
-                </button>
-              ) : inCartQty > 0 ? (
-                <Link
-                  to="/cart"
-                  onClick={(e) => e.stopPropagation()}
-                  aria-label={`In cart with quantity ${inCartQty}. Go to cart`}
-                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/15 border border-orange-500/50 hover:bg-orange-500/25 text-orange-400 hover:text-orange-300 font-bold text-xs uppercase tracking-wider transition-colors min-h-[36px]"
-                >
-                  <ShoppingCart className="w-3.5 h-3.5 text-orange-400" />
-                  <span>In cart · Qty {inCartQty}</span>
-                </Link>
-              ) : (
-                <GradientButton
-                  size="sm"
-                  isAdded={isAdded}
-                  onClick={handleAddToCart}
-                  className="shrink-0"
-                >
-                  Add to Cart
-                </GradientButton>
-              )}
-              <div className="sr-only" aria-live="polite">
-                {isAdded ? `${displayName} added to your cart.` : ''}
+              <div className="flex flex-col gap-2 shrink-0 min-w-[120px]">
+                {isOutOfStock ? (
+                  <button
+                    type="button"
+                    disabled
+                    aria-disabled="true"
+                    className="w-full px-3 py-1.5 text-xs min-h-[36px] uppercase tracking-wider font-bold rounded-lg bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50 flex items-center justify-center"
+                  >
+                    Out of stock
+                  </button>
+                ) : inCartQty > 0 ? (
+                  <Link
+                    to="/cart"
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`In cart with quantity ${inCartQty}. Go to cart`}
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/15 border border-orange-500/50 hover:bg-orange-500/25 text-orange-400 hover:text-orange-300 font-bold text-xs uppercase tracking-wider transition-colors min-h-[36px]"
+                  >
+                    <ShoppingCart className="w-3.5 h-3.5 text-orange-400" />
+                    <span>In cart · Qty {inCartQty}</span>
+                  </Link>
+                ) : (
+                  <GradientButton
+                    size="sm"
+                    fullWidth
+                    isAdded={isAdded}
+                    onClick={handleAddToCart}
+                    className="shrink-0"
+                  >
+                    Add to Cart
+                  </GradientButton>
+                )}
+                <div className="sr-only" aria-live="polite">
+                  {isAdded ? `${displayName} added to your cart.` : ''}
+                </div>
+
+                {/* Buy Now Button */}
+                {isOutOfStock ? (
+                  <button
+                    type="button"
+                    disabled
+                    aria-disabled="true"
+                    aria-label={`Buy ${displayName} now`}
+                    className="w-full px-3 py-1.5 text-xs min-h-[36px] uppercase tracking-wider font-bold rounded-lg bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50 flex items-center justify-center"
+                  >
+                    Buy Now
+                  </button>
+                ) : (
+                  <motion.button
+                    type="button"
+                    onClick={handleBuyNow}
+                    aria-label={`Buy ${displayName} now`}
+                    whileHover={
+                      shouldReduceMotion
+                        ? undefined
+                        : { scale: 1.02, transition: { duration: 0.18 } }
+                    }
+                    whileTap={
+                      shouldReduceMotion
+                        ? undefined
+                        : { scale: 0.96, transition: { duration: 0.12 } }
+                    }
+                    className="w-full px-3 py-1.5 text-xs min-h-[36px] uppercase tracking-wider font-extrabold rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-black shadow-[0_0_20px_rgba(249,115,22,0.35)] hover:shadow-[0_0_28px_rgba(249,115,22,0.55)] flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                  >
+                    <Zap className="w-3.5 h-3.5 fill-current shrink-0" />
+                    <span>Buy Now</span>
+                  </motion.button>
+                )}
               </div>
             </div>
           </div>
@@ -498,38 +543,75 @@ export default function ProductCard({
               )}
             </div>
 
-            {/* Add to Cart / In Cart / Out of Stock Button */}
-            {isOutOfStock ? (
-              <button
-                type="button"
-                disabled
-                aria-disabled="true"
-                className="w-full px-3 py-2 text-xs min-h-[38px] uppercase tracking-wider font-bold rounded-lg bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50 flex items-center justify-center"
-              >
-                Out of stock
-              </button>
-            ) : inCartQty > 0 ? (
-              <Link
-                to="/cart"
-                onClick={(e) => e.stopPropagation()}
-                aria-label={`In cart with quantity ${inCartQty}. Go to cart`}
-                className="w-full px-3 py-2 text-xs min-h-[38px] uppercase tracking-wider font-extrabold rounded-lg bg-orange-500/15 border border-orange-500/50 hover:bg-orange-500/25 text-orange-400 hover:text-orange-300 flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <ShoppingCart className="w-3.5 h-3.5 text-orange-400" />
-                <span>In cart · Qty {inCartQty}</span>
-              </Link>
-            ) : (
-              <GradientButton
-                size="sm"
-                fullWidth
-                isAdded={isAdded}
-                onClick={handleAddToCart}
-              >
-                Add to Cart
-              </GradientButton>
-            )}
-            <div className="sr-only" aria-live="polite">
-              {isAdded ? `${displayName} added to your cart.` : ''}
+            {/* Action Buttons (Vertically Stacked) */}
+            <div className="flex flex-col gap-2">
+              {/* Add to Cart / In Cart / Out of Stock Button */}
+              {isOutOfStock ? (
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  className="w-full px-3 py-2 text-xs min-h-[38px] uppercase tracking-wider font-bold rounded-lg bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50 flex items-center justify-center"
+                >
+                  Out of stock
+                </button>
+              ) : inCartQty > 0 ? (
+                <Link
+                  to="/cart"
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label={`In cart with quantity ${inCartQty}. Go to cart`}
+                  className="w-full px-3 py-2 text-xs min-h-[38px] uppercase tracking-wider font-extrabold rounded-lg bg-orange-500/15 border border-orange-500/50 hover:bg-orange-500/25 text-orange-400 hover:text-orange-300 flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <ShoppingCart className="w-3.5 h-3.5 text-orange-400" />
+                  <span>In cart · Qty {inCartQty}</span>
+                </Link>
+              ) : (
+                <GradientButton
+                  size="sm"
+                  fullWidth
+                  isAdded={isAdded}
+                  onClick={handleAddToCart}
+                  className="min-h-[38px] py-2"
+                >
+                  Add to Cart
+                </GradientButton>
+              )}
+              <div className="sr-only" aria-live="polite">
+                {isAdded ? `${displayName} added to your cart.` : ''}
+              </div>
+
+              {/* Buy Now Button */}
+              {isOutOfStock ? (
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  aria-label={`Buy ${displayName} now`}
+                  className="w-full px-3 py-2 text-xs min-h-[38px] uppercase tracking-wider font-bold rounded-lg bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50 flex items-center justify-center"
+                >
+                  Buy Now
+                </button>
+              ) : (
+                <motion.button
+                  type="button"
+                  onClick={handleBuyNow}
+                  aria-label={`Buy ${displayName} now`}
+                  whileHover={
+                    shouldReduceMotion
+                      ? undefined
+                      : { scale: 1.02, transition: { duration: 0.18 } }
+                  }
+                  whileTap={
+                    shouldReduceMotion
+                      ? undefined
+                      : { scale: 0.96, transition: { duration: 0.12 } }
+                  }
+                  className="w-full px-3 py-2 text-xs min-h-[38px] uppercase tracking-wider font-extrabold rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-black shadow-[0_0_20px_rgba(249,115,22,0.35)] hover:shadow-[0_0_28px_rgba(249,115,22,0.55)] flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-current shrink-0" />
+                  <span>Buy Now</span>
+                </motion.button>
+              )}
             </div>
           </div>
         </div>

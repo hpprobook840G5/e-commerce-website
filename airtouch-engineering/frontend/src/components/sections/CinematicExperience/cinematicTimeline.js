@@ -72,7 +72,7 @@ export function createCinematicTimeline({
 
   const masterTimeline = gsap.timeline({
     paused: true,
-    defaults: { ease: 'sine.inOut', force3D: true },
+    defaults: { ease: 'sine.inOut' },
     onUpdate: () => {
       const rawProgress = Math.max(0, Math.min(1, masterTimeline.progress()))
       const s = cinematicStateRef?.current

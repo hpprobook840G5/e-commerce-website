@@ -15,7 +15,9 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCartStore } from '../../store/cartStore.js'
-import { useAuth } from '../../context/AuthContext.jsx'
+import { useAdminAuth } from '../../context/AdminAuthContext.jsx'
+import { useCustomerAuth } from '../../context/CustomerAuthContext.jsx'
+import AccountStrip from './AccountStrip.jsx'
 
 /**
  * AirTouch Engineering - Premium Automotive Navigation Bar
@@ -23,7 +25,9 @@ import { useAuth } from '../../context/AuthContext.jsx'
 export default function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { user, signOut, isConfigured, admin } = useAuth()
+  const { admin } = useAdminAuth()
+  const { user: customerUser, logout: customerLogout, loading: customerLoading, greetingVariant } = useCustomerAuth()
+  const isCustomerLoggedIn = Boolean(customerUser && !customerLoading)
 
   // Cart state
   const items = useCartStore((state) => state.items)
@@ -217,18 +221,10 @@ export default function Navbar() {
     return location.pathname.startsWith(item.path)
   }
 
-  const userInitial = (
-    user?.user_metadata?.full_name?.charAt(0) ||
-    user?.user_metadata?.name?.charAt(0) ||
-    user?.email?.charAt(0) ||
-    'U'
-  ).toUpperCase()
-
-  const userDisplayName =
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.name ||
-    user?.email ||
-    'Customer'
+  const customerFullName = customerUser?.fullName || ''
+  const customerFirstName = customerFullName.trim() ? customerFullName.trim().split(/\s+/)[0] : 'Customer'
+  const userInitial = (customerFullName.trim().charAt(0) || 'U').toUpperCase()
+  const userDisplayName = customerFullName || 'Customer'
 
   return (
     <header
@@ -393,7 +389,7 @@ export default function Navbar() {
                 <span>Admin</span>
               </Link>
             )}
-            {user ? (
+            {isCustomerLoggedIn ? (
               <div ref={userMenuRef} className="relative">
                 <button
                   type="button"
@@ -418,7 +414,7 @@ export default function Navbar() {
                     >
                       <div className="px-4 py-2 border-b border-zinc-850">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-orange-500">
-                          Signed in as
+                          {greetingVariant === 'welcome' ? 'Welcome' : 'Hello'}, {customerFirstName}
                         </p>
                         <p className="text-xs font-semibold text-zinc-200 truncate mt-0.5">
                           {userDisplayName}
@@ -451,7 +447,7 @@ export default function Navbar() {
                           data-testid="navbar-logout-button"
                           onClick={() => {
                             setIsUserMenuOpen(false)
-                            signOut()
+                            customerLogout()
                           }}
                           className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-red-400 hover:text-red-300 hover:bg-zinc-900 transition-colors cursor-pointer"
                         >
@@ -466,17 +462,15 @@ export default function Navbar() {
             ) : (
               <div className="flex items-center gap-2">
                 <Link
-                  to="/auth"
+                  to="/auth?mode=login"
                   data-testid="navbar-login-link"
-                  title={!isConfigured ? 'Supabase not configured in .env' : undefined}
                   className="hidden lg:inline-flex items-center px-3 py-2 text-xs font-bold uppercase tracking-wider text-zinc-300 hover:text-white hover:bg-zinc-900 rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-orange-500"
                 >
                   Log In
                 </Link>
                 <Link
-                  to="/auth"
+                  to="/auth?mode=signup"
                   data-testid="navbar-signup-link"
-                  title={!isConfigured ? 'Supabase not configured in .env' : undefined}
                   className="inline-flex items-center px-3.5 sm:px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-400 text-black font-extrabold text-xs uppercase tracking-wider transition-all shadow-[0_0_14px_rgba(249,115,22,0.3)] hover:shadow-[0_0_20px_rgba(249,115,22,0.45)] focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   Sign Up
@@ -502,6 +496,9 @@ export default function Navbar() {
           </button>
         </div>
       </div>
+
+      {/* ================= SECONDARY HOMEPAGE ACCOUNT STRIP ================= */}
+      <AccountStrip />
 
       {/* ================= MOBILE NAVIGATION DRAWER ================= */}
       <AnimatePresence>
@@ -550,7 +547,7 @@ export default function Navbar() {
                 )}
 
                 {/* 1. Mobile Auth Header: Log In & Sign Up buttons or Logged-in Profile */}
-                {user ? (
+                {isCustomerLoggedIn ? (
                   <div className="p-3.5 bg-zinc-900/80 border border-zinc-800 rounded-xl flex items-center justify-between">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 text-black font-black text-sm flex items-center justify-center shrink-0">
@@ -558,7 +555,7 @@ export default function Navbar() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-orange-500">
-                          Logged In
+                          {greetingVariant === 'welcome' ? 'Welcome' : 'Hello'}, {customerFirstName}
                         </p>
                         <p className="text-xs font-semibold text-white truncate">
                           {userDisplayName}
@@ -569,7 +566,7 @@ export default function Navbar() {
                       type="button"
                       onClick={() => {
                         setIsMobileMenuOpen(false)
-                        signOut()
+                        customerLogout()
                       }}
                       className="text-xs font-bold uppercase tracking-wider text-red-400 hover:text-red-300 px-2 py-1 rounded transition-colors"
                     >
@@ -579,7 +576,7 @@ export default function Navbar() {
                 ) : (
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <Link
-                      to="/auth"
+                      to="/auth?mode=login"
                       data-testid="mobile-login-link"
                       onClick={() => setIsMobileMenuOpen(false)}
                       className="w-full py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-zinc-850"
@@ -588,7 +585,7 @@ export default function Navbar() {
                       <span>Log In</span>
                     </Link>
                     <Link
-                      to="/auth"
+                      to="/auth?mode=signup"
                       data-testid="mobile-signup-link"
                       onClick={() => setIsMobileMenuOpen(false)}
                       className="w-full py-2.5 rounded-lg bg-orange-500 text-black font-extrabold text-xs uppercase tracking-wider flex items-center justify-center shadow-md"

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { ShieldCheck, Lock, Mail, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext.jsx'
+import { useAdminAuth } from '../../context/AdminAuthContext.jsx'
 import { loginAdmin } from '../../services/adminAuth.js'
 
 export default function AdminLogin() {
   const navigate = useNavigate()
-  const { admin, adminLoading, checkAdminSession } = useAuth()
+  const { admin, adminLoading, checkAdminSession } = useAdminAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

@@ -1,3 +1,5 @@
+import { customerSession } from './customerSession.js'
+
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 export class ApiError extends Error {
@@ -11,12 +13,21 @@ export class ApiError extends Error {
 
 export async function api(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  }
+
+  // Attach customer bearer token if an active session exists
+  const token = customerSession.getToken()
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
     ...options,
+    headers,
   })
 
   const data = await response.json().catch(() => ({}))

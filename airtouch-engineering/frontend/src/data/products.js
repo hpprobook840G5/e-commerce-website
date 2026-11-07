@@ -89,14 +89,34 @@ export const BRANDS = [
 
 export const PRODUCTS = productsData.products
 
+const dynamicProductsMap = new Map()
+
+export function setDynamicProducts(list = []) {
+  if (Array.isArray(list)) {
+    list.forEach((p) => {
+      if (p.id) dynamicProductsMap.set(p.id, p)
+      if (p.slug) dynamicProductsMap.set(p.slug, p)
+    })
+  }
+}
+
 export function getProductById(id) {
   if (!id) return null
+  if (dynamicProductsMap.has(id)) return dynamicProductsMap.get(id)
   return PRODUCTS.find((p) => p.id === id || p.slug === id) || null
 }
 
 export function getProductBySlug(slug) {
   if (!slug) return null
   return PRODUCTS.find((p) => p.slug === slug || p.id === slug) || null
+}
+
+export function getRelatedProducts(product, limit = 6) {
+  if (!product) return []
+  const category = (product.category || '').toLowerCase()
+  return PRODUCTS
+    .filter((p) => p.id !== product.id && (p.category || '').toLowerCase() === category)
+    .slice(0, limit)
 }
 
 export default PRODUCTS

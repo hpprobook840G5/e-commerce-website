@@ -10,7 +10,7 @@ export const errorHandler = (err, req, res, next) => {
   if (status >= 500) {
     console.error('[Unhandled Server Error]:', err.stack || err)
     return res.status(status).json({
-      message: status === 503 ? (err.message || 'Service Unavailable') : 'Something went wrong.',
+      message: err.message || (status === 503 ? 'Service Unavailable' : 'Could not save your details. Please try again.'),
     })
   }
 

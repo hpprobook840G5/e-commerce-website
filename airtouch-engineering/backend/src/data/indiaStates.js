@@ -34,23 +34,15 @@ export const indiaStates = [
   { code: 'TR', name: 'Tripura' },
   { code: 'UP', name: 'Uttar Pradesh' },
   { code: 'UK', name: 'Uttarakhand' },
-  { code: 'WB', name: 'West Bengal' }
+  { code: 'WB', name: 'West Bengal' },
 ]
 
-/**
- * Checks if a given state string matches an Indian state / UT name or code.
- * Case-insensitive.
- *
- * @param {string} state
- * @returns {boolean}
- */
-export function isValidState(state) {
-  if (!state || typeof state !== 'string') return false
-  const clean = state.trim().toLowerCase()
+export function isValidState(stateName) {
+  if (!stateName || typeof stateName !== 'string') return false
+  const trimmed = stateName.trim().toLowerCase()
   return indiaStates.some(
-    (s) => s.name.toLowerCase() === clean || s.code.toLowerCase() === clean
+    (s) => s.name.toLowerCase() === trimmed || s.code.toLowerCase() === trimmed
   )
 }
 
 export default indiaStates
-

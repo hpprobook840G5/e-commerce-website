@@ -25,13 +25,45 @@ if (fs.existsSync(envPath)) {
 function cleanEnv(val) {
   if (val === undefined || val === null) return ''
   let cleaned = String(val).trim()
-  if (
+  while (
     (cleaned.startsWith('"') && cleaned.endsWith('"') && cleaned.length >= 2) ||
     (cleaned.startsWith("'") && cleaned.endsWith("'") && cleaned.length >= 2)
   ) {
     cleaned = cleaned.slice(1, -1).trim()
   }
   return cleaned
+}
+
+/**
+ * Parses an environment variable as a positive integer (> 0).
+ * Falls back to the provided fallback value if missing, NaN, or <= 0.
+ *
+ * @param {string} val
+ * @param {number} fallback
+ * @returns {number}
+ */
+function parsePositiveInt(val, fallback) {
+  const parsed = parseInt(val, 10)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+}
+
+// Rate Limiting Configuration
+export const RATE_LIMIT_WINDOW_MINUTES = parsePositiveInt(cleanEnv(process.env.RATE_LIMIT_WINDOW_MINUTES), 15)
+export const RATE_LIMIT_LOGIN_MAX = parsePositiveInt(cleanEnv(process.env.RATE_LIMIT_LOGIN_MAX), 5)
+export const RATE_LIMIT_SIGNUP_MAX = parsePositiveInt(cleanEnv(process.env.RATE_LIMIT_SIGNUP_MAX), 10)
+export const RATE_LIMIT_OTP_MAX = parsePositiveInt(cleanEnv(process.env.RATE_LIMIT_OTP_MAX), 3)
+export const RATE_LIMIT_RESET_MAX = parsePositiveInt(cleanEnv(process.env.RATE_LIMIT_RESET_MAX), 5)
+export const RATE_LIMIT_DEV_MULTIPLIER = parsePositiveInt(cleanEnv(process.env.RATE_LIMIT_DEV_MULTIPLIER), 10)
+
+export const isProduction = cleanEnv(process.env.NODE_ENV) === 'production'
+
+// Log active rate limit profile at startup (only profile name, no values beyond that)
+if (cleanEnv(process.env.NODE_ENV) !== 'test') {
+  console.log(
+    isProduction
+      ? 'Rate limits: production'
+      : `Rate limits: development x${RATE_LIMIT_DEV_MULTIPLIER}`
+  )
 }
 
 // Supabase Configuration
@@ -44,69 +76,26 @@ export const isAuthConfigured = Boolean(
   !cleanEnv(process.env.SUPABASE_URL).includes('placeholder')
 )
 
-// Sanitized SMTP & OTP Variables
-const smtpHost = cleanEnv(process.env.SMTP_HOST)
-const smtpPort = cleanEnv(process.env.SMTP_PORT) || '587'
-const smtpSecure = cleanEnv(process.env.SMTP_SECURE) || 'false'
-const smtpUser = cleanEnv(process.env.SMTP_USER)
-const smtpPass = cleanEnv(process.env.SMTP_PASS)
-const smtpFrom = cleanEnv(process.env.SMTP_FROM) || 'AirTouch Engineering <no-reply@example.com>'
+/**
+ * Verify if email and OTP secrets are configured.
+ * Returns true if all required settings are non-empty.
+ * Logs only missing variable names, never secrets.
+ */
+export function checkEmailConfig() {
+  const missing = []
+  if (!cleanEnv(process.env.SMTP_HOST)) missing.push('SMTP_HOST')
+  if (!cleanEnv(process.env.SMTP_USER)) missing.push('SMTP_USER')
+  if (!cleanEnv(process.env.SMTP_PASS)) missing.push('SMTP_PASS')
+  if (!cleanEnv(process.env.OTP_HMAC_SECRET)) missing.push('OTP_HMAC_SECRET')
 
-const otpHmacSecret = cleanEnv(process.env.OTP_HMAC_SECRET)
-const otpTtlMinutes = cleanEnv(process.env.OTP_TTL_MINUTES) || '10'
-const otpMaxAttempts = cleanEnv(process.env.OTP_MAX_ATTEMPTS) || '5'
-
-// Validate required OTP configuration variables by name only
-const missingOrInvalid = []
-
-if (!smtpHost || smtpHost.toLowerCase().includes('your') || smtpHost.includes('<') || smtpHost.includes('>') || smtpHost.toLowerCase().includes('example.com')) {
-  missingOrInvalid.push('SMTP_HOST')
-}
-if (!smtpPort || !/^\d+$/.test(smtpPort)) {
-  missingOrInvalid.push('SMTP_PORT')
-}
-if (smtpSecure !== 'true' && smtpSecure !== 'false') {
-  missingOrInvalid.push('SMTP_SECURE')
-}
-if (!smtpUser || smtpUser.toLowerCase().includes('your') || smtpUser.includes('<') || smtpUser.includes('>') || smtpUser.toLowerCase().includes('example.com')) {
-  missingOrInvalid.push('SMTP_USER')
-}
-if (!smtpPass || smtpPass.toLowerCase().includes('your') || smtpPass.includes('<') || smtpPass.includes('>') || smtpPass.toLowerCase().includes('example.com')) {
-  missingOrInvalid.push('SMTP_PASS')
-}
-if (!smtpFrom || smtpFrom.toLowerCase().includes('your') || smtpFrom.toLowerCase().includes('example.com')) {
-  missingOrInvalid.push('SMTP_FROM')
-}
-if (!otpHmacSecret || otpHmacSecret.length < 32 || otpHmacSecret.toLowerCase().includes('your') || otpHmacSecret.toLowerCase().includes('example.com')) {
-  missingOrInvalid.push('OTP_HMAC_SECRET')
-}
-if (!otpTtlMinutes || !/^\d+$/.test(otpTtlMinutes) || parseInt(otpTtlMinutes, 10) <= 0) {
-  missingOrInvalid.push('OTP_TTL_MINUTES')
-}
-if (!otpMaxAttempts || !/^\d+$/.test(otpMaxAttempts) || parseInt(otpMaxAttempts, 10) <= 0) {
-  missingOrInvalid.push('OTP_MAX_ATTEMPTS')
+  if (missing.length > 0) {
+    console.warn(`[Email Service Warning]: Missing configuration variables: ${missing.join(', ')}`)
+    return false
+  }
+  return true
 }
 
-// Log startup config status: exactly one line with names only
-if (missingOrInvalid.length === 0) {
-  console.log('OTP config OK')
-} else {
-  console.log(`OTP config missing: ${missingOrInvalid.join(', ')}`)
-}
-
-export const isSmtpConfigured = Boolean(
-  smtpHost &&
-  smtpUser &&
-  smtpPass &&
-  !missingOrInvalid.includes('SMTP_HOST') &&
-  !missingOrInvalid.includes('SMTP_USER') &&
-  !missingOrInvalid.includes('SMTP_PASS')
-)
-
-export const isOtpConfigured = Boolean(
-  isSmtpConfigured &&
-  missingOrInvalid.length === 0
-)
+export const isEmailConfigured = checkEmailConfig()
 
 export default {
   PORT: cleanEnv(process.env.PORT) || 5000,
@@ -122,19 +111,28 @@ export default {
   ADMIN_PASSWORD_HASH: cleanEnv(process.env.ADMIN_PASSWORD_HASH),
   ADMIN_JWT_SECRET: cleanEnv(process.env.ADMIN_JWT_SECRET) || cleanEnv(process.env.JWT_SECRET) || 'dev-admin-jwt-secret',
   ADMIN_SESSION_HOURS: parseInt(cleanEnv(process.env.ADMIN_SESSION_HOURS) || '8', 10),
+  CUSTOMER_JWT_SECRET: cleanEnv(process.env.CUSTOMER_JWT_SECRET) || cleanEnv(process.env.JWT_SECRET) || 'airtouch-customer-auth-jwt-secret-min-32-chars-long',
   CONTACT_IP_SALT: cleanEnv(process.env.CONTACT_IP_SALT) || 'dev-contact-ip-salt-default',
-  // SMTP settings
-  SMTP_HOST: smtpHost,
-  SMTP_PORT: parseInt(smtpPort, 10),
-  SMTP_SECURE: smtpSecure === 'true',
-  SMTP_USER: smtpUser,
-  SMTP_PASS: smtpPass,
-  SMTP_FROM: smtpFrom,
-  // OTP settings
-  OTP_HMAC_SECRET: otpHmacSecret,
-  OTP_TTL_MINUTES: parseInt(otpTtlMinutes, 10),
-  OTP_MAX_ATTEMPTS: parseInt(otpMaxAttempts, 10),
+  // Nodemailer SMTP
+  SMTP_HOST: cleanEnv(process.env.SMTP_HOST),
+  SMTP_PORT: parseInt(cleanEnv(process.env.SMTP_PORT) || '587', 10),
+  SMTP_SECURE: cleanEnv(process.env.SMTP_SECURE) === 'true',
+  SMTP_USER: cleanEnv(process.env.SMTP_USER),
+  SMTP_PASS: cleanEnv(process.env.SMTP_PASS),
+  SMTP_FROM: cleanEnv(process.env.SMTP_FROM) || 'AirTouch Engineering <no-reply@example.com>',
+  // OTP HMAC and Timing
+  OTP_HMAC_SECRET: cleanEnv(process.env.OTP_HMAC_SECRET),
+  OTP_TTL_MINUTES: parseInt(cleanEnv(process.env.OTP_TTL_MINUTES) || '10', 10),
+  OTP_MAX_ATTEMPTS: parseInt(cleanEnv(process.env.OTP_MAX_ATTEMPTS) || '5', 10),
+  RESET_TOKEN_MINUTES: parseInt(cleanEnv(process.env.RESET_TOKEN_MINUTES) || '15', 10),
+  // Rate Limiting
+  RATE_LIMIT_WINDOW_MINUTES,
+  RATE_LIMIT_LOGIN_MAX,
+  RATE_LIMIT_SIGNUP_MAX,
+  RATE_LIMIT_OTP_MAX,
+  RATE_LIMIT_RESET_MAX,
+  RATE_LIMIT_DEV_MULTIPLIER,
+  isProduction,
   isAuthConfigured,
-  isSmtpConfigured,
-  isOtpConfigured,
+  isEmailConfigured,
 }

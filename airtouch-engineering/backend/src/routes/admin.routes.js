@@ -3,9 +3,17 @@ import { body, validationResult } from 'express-validator'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import rateLimit from 'express-rate-limit'
+import multer from 'multer'
 import env from '../config/env.js'
 import requireAdmin from '../middleware/requireAdmin.js'
 import contactController from '../controllers/contact.controller.js'
+import adminProductController from '../controllers/adminProduct.controller.js'
+import adminAnalyticsController from '../controllers/adminAnalytics.controller.js'
+import {
+  createProductValidator,
+  updateProductValidator,
+  productQueryValidator,
+} from '../validators/product.validators.js'
 
 const router = Router()
 
@@ -28,6 +36,36 @@ const getCookieOptions = () => ({
   maxAge: (env.ADMIN_SESSION_HOURS || 8) * 60 * 60 * 1000,
   path: '/',
 })
+
+// Multer memory storage configuration (Max 2 MB, JPEG/PNG/WebP only)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 2 * 1024 * 1024,
+  },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp']
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true)
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.'))
+    }
+  },
+})
+
+const handleImageUpload = (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'File Too Large', message: 'Image must not exceed 2 MB' })
+      }
+      return res.status(400).json({ error: 'Upload Error', message: err.message })
+    } else if (err) {
+      return res.status(400).json({ error: 'Invalid File', message: err.message })
+    }
+    next()
+  })
+}
 
 /**
  * POST /api/admin/login
@@ -81,7 +119,7 @@ router.post(
         return genericFailure()
       }
 
-      const secret = env.ADMIN_JWT_SECRET || env.JWT_SECRET || 'dev-admin-fallback-secret'
+      const secret = env.ADMIN_JWT_SECRET || 'dev-admin-fallback-secret'
       const sessionHours = env.ADMIN_SESSION_HOURS || 8
 
       const token = jwt.sign(
@@ -135,7 +173,7 @@ router.post('/logout', (req, res) => {
 
 /**
  * GET /api/admin/me
- * Protected by requireAdmin middleware. Returns admin session profile if valid.
+ * Protected by requireAdmin middleware. Returns admin identity if session is valid.
  */
 router.get('/me', requireAdmin, (req, res) => {
   return res.json({
@@ -147,31 +185,28 @@ router.get('/me', requireAdmin, (req, res) => {
   })
 })
 
-/**
- * Example protected admin resource endpoint
- */
-router.get('/dashboard-stats', requireAdmin, (req, res) => {
-  return res.json({
-    message: 'Admin dashboard metrics',
-    admin: req.admin.email,
-    stats: {
-      totalProducts: 8,
-      activeOrders: 0,
-      systemHealth: 'Optimal',
-    },
-  })
-})
+// ==========================================
+// PROTECTED PRODUCT MANAGEMENT ENDPOINTS
+// ==========================================
+router.get('/products', requireAdmin, productQueryValidator, adminProductController.listProducts)
+router.post('/products', requireAdmin, createProductValidator, adminProductController.createProduct)
+router.patch('/products/:id', requireAdmin, updateProductValidator, adminProductController.updateProduct)
+router.delete('/products/:id', requireAdmin, adminProductController.deleteProduct)
+router.post('/products/:id/image', requireAdmin, handleImageUpload, adminProductController.uploadImage)
 
-/**
- * GET /api/admin/contact-messages
- * Protected: Paginated customer inquiries with optional status/topic filters.
- */
+// ==========================================
+// PROTECTED SALES ANALYTICS & ORDERS
+// ==========================================
+router.get('/analytics/summary', requireAdmin, adminAnalyticsController.getSummary)
+router.get('/analytics/products', requireAdmin, adminAnalyticsController.getProductPerformance)
+router.get('/analytics/categories', requireAdmin, adminAnalyticsController.getCategoryPerformance)
+router.get('/analytics/trend', requireAdmin, adminAnalyticsController.getRevenueTrend)
+router.get('/orders', requireAdmin, adminAnalyticsController.getOrders)
+
+// ==========================================
+// PROTECTED CONTACT MESSAGES
+// ==========================================
 router.get('/contact-messages', requireAdmin, contactController.listContactMessages)
-
-/**
- * PATCH /api/admin/contact-messages/:id
- * Protected: Update status of a customer inquiry.
- */
 router.patch('/contact-messages/:id', requireAdmin, contactController.updateContactStatus)
 
 export default router

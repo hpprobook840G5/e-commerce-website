@@ -1,53 +1,65 @@
 import nodemailer from 'nodemailer'
-import env, { isSmtpConfigured } from './env.js'
+import env from './env.js'
 
 let transporter = null
 
-if (isSmtpConfigured) {
-  transporter = nodemailer.createTransport({
+if (env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS) {
+  const port = parseInt(env.SMTP_PORT, 10) || 587
+  const isPort465 = port === 465
+  const isPort587 = port === 587
+
+  const transportConfig = {
     host: env.SMTP_HOST,
-    port: env.SMTP_PORT,
-    secure: env.SMTP_SECURE,
+    port: port,
+    secure: isPort465 ? true : Boolean(env.SMTP_SECURE),
     auth: {
       user: env.SMTP_USER,
       pass: env.SMTP_PASS,
     },
-  })
+  }
 
-  // Verify connection configuration on startup (logging status only, never credentials)
+  // If port 587 or secure is false, enforce STARTTLS
+  if (isPort587 || (!isPort465 && !env.SMTP_SECURE)) {
+    transportConfig.requireTLS = true
+  }
+
+  transporter = nodemailer.createTransport(transportConfig)
+
   transporter.verify((error) => {
     if (error) {
-      console.error(`[SMTP Verification Failed]: ${error.code || 'UNKNOWN'}. Hint: Check SMTP_USER and the Gmail App Password.`)
+      console.warn(`[Mailer Warning]: Verification failed with code ${error.code || error.name || 'UNKNOWN'}`)
     } else {
-      console.log('[SMTP Verification Success]: SMTP server is ready to deliver messages')
+      console.log('[Mailer]: SMTP transporter verified and ready to send mail')
     }
   })
 } else {
-  console.log('[SMTP Info]: SMTP transporter disabled (credentials not configured).')
+  console.log('[Mailer]: SMTP credentials not fully configured; transporter initialized in mock/disabled mode')
 }
 
 /**
- * Send an email message via the configured Nodemailer transporter.
+ * Sends an email using the configured SMTP transporter.
  *
  * @param {object} mailOptions - { to, subject, text, html }
- * @returns {Promise<object>} Nodemailer send result
+ * @returns {Promise<object>}
  */
 export async function sendMail({ to, subject, text, html }) {
   if (!transporter) {
-    const error = new Error('Email sign-in is not configured')
-    error.status = 503
-    throw error
+    const err = new Error('Email service is not configured.')
+    err.status = 503
+    throw err
   }
 
-  return transporter.sendMail({
+  const options = {
     from: env.SMTP_FROM,
     to,
     subject,
     text,
     html,
-  })
+  }
+
+  return transporter.sendMail(options)
 }
 
-export { transporter }
-export default transporter
-
+export default {
+  sendMail,
+}

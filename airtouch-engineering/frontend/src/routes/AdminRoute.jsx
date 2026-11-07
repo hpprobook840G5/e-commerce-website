@@ -1,9 +1,9 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { ShieldCheck, Loader2 } from 'lucide-react'
-import { useAuth } from '../context/AuthContext.jsx'
+import { useAdminAuth } from '../context/AdminAuthContext.jsx'
 
 export default function AdminRoute() {
-  const { admin, adminLoading } = useAuth()
+  const { admin, adminLoading } = useAdminAuth()
 
   if (adminLoading) {
     return (

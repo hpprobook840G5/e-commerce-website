@@ -4,155 +4,144 @@ import {
   Gauge,
   Mail,
   Lock,
-  ArrowRight,
-  ArrowLeft,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
   User,
   Phone,
-  ShieldCheck,
+  MapPin,
+  Building2,
   Eye,
   EyeOff,
-  MapPin,
-  Building,
-  ChevronDown,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  ArrowLeft,
+  KeyRound,
+  ShieldCheck,
 } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext.jsx'
-import {
-  sendOtp,
-  verifyOtp,
-  signInWithGoogle,
-  signInWithEmailPassword,
-  createAccount,
-  getMe,
-  normalizeIndianPhoneNumber,
-} from '../../services/auth.js'
+import { useCustomerAuth } from '../../context/CustomerAuthContext.jsx'
 import { indiaStates } from '../../data/indiaStates.js'
 import { indiaDistricts } from '../../data/indiaDistricts.js'
-import { lookupPincode } from '../../services/pincode.js'
+import OtpInput from '../../components/auth/OtpInput.jsx'
 
-function getSafeRedirectUrl(nextParam) {
-  if (!nextParam || typeof nextParam !== 'string') return '/account'
-  if (nextParam.startsWith('/') && !nextParam.startsWith('//') && !nextParam.includes(':')) {
-    return nextParam
+function maskEmail(email) {
+  if (!email || !email.includes('@')) return email
+  const [local, domain] = email.split('@')
+  if (local.length <= 2) {
+    return `${local[0]}*@${domain}`
   }
-  return '/account'
+  const maskedLocal = `${local[0]}${'*'.repeat(Math.max(local.length - 2, 3))}${local[local.length - 1]}`
+  return `${maskedLocal}@${domain}`
 }
 
-function GoogleIcon() {
-  return (
-    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="#4285F4"
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-      />
-    </svg>
-  )
+const VALID_FIELD_KEYS = new Set([
+  'fullName',
+  'email',
+  'mobile',
+  'password',
+  'confirmPassword',
+  'addressLine1',
+  'landmark',
+  'state',
+  'district',
+  'pincode',
+])
+
+const FIELD_NAME_MAP = {
+  full_name: 'fullName',
+  confirm_password: 'confirmPassword',
+  address_line1: 'addressLine1',
+  address_line_1: 'addressLine1',
+  phone: 'mobile',
+  phone_number: 'mobile',
+  city: 'district',
+  postal_code: 'pincode',
+  pin: 'pincode',
 }
 
 export default function Auth() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const {
+    user,
+    login,
+    signup,
+    verifySignup,
+    resendSignup,
+    forgotPassword,
+    verifyPasswordReset,
+    resetPassword,
+    loading: isAuthLoading,
+  } = useCustomerAuth()
 
-  const nextParam = searchParams.get('next')
-  const safeRedirect = getSafeRedirectUrl(nextParam)
+  // Step state: 'auth' | 'signup_verify' | 'forgot_email' | 'forgot_verify' | 'forgot_reset'
+  const [step, setStep] = useState('auth')
 
-  // Current Step: 'choice' | 'email' | 'code' | 'new-user' | 'password'
-  const [step, setStep] = useState('choice')
+  // In 'auth' step, Mode: 'login' | 'signup'
+  const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'login'
+  const [mode, setMode] = useState(initialMode)
 
-  // Form Fields - Auth
+  // Redirect logged-in users to "/"
+  useEffect(() => {
+    if (!isAuthLoading && user) {
+      navigate('/', { replace: true })
+    }
+  }, [user, isAuthLoading, navigate])
+
+  // Sync mode with query params
+  useEffect(() => {
+    const qMode = searchParams.get('mode')
+    if (qMode === 'signup' || qMode === 'login') {
+      setMode(qMode)
+    }
+  }, [searchParams])
+
+  // Form Fields - Login & General
   const [email, setEmail] = useState('')
-  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', ''])
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
-  // Sign-Up / Profile Completion Fields (Step 4: new-user)
+  // Sign Up Additional Fields
   const [fullName, setFullName] = useState('')
-  const [mobileNumber, setMobileNumber] = useState('')
-  const [newPassword, setNewPassword] = useState('')
+  const [mobile, setMobile] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [line1, setLine1] = useState('')
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [addressLine1, setAddressLine1] = useState('')
   const [landmark, setLandmark] = useState('')
-  const [district, setDistrict] = useState('')
-  const [stateName, setStateName] = useState('')
+  const [selectedState, setSelectedState] = useState('')
+  const [selectedDistrict, setSelectedDistrict] = useState('')
   const [pincode, setPincode] = useState('')
 
-  // Pincode lookup state
-  const [isPincodeLoading, setIsPincodeLoading] = useState(false)
-  const [pincodeLookupMessage, setPincodeLookupMessage] = useState('')
-  const [pincodeLookupError, setPincodeLookupError] = useState('')
-  const pincodeAbortRef = useRef(null)
+  // Verification & Password Reset state
+  const [otpEmail, setOtpEmail] = useState('')
+  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', ''])
+  const [resetToken, setResetToken] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false)
 
-  // UI state for password toggling
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-
-  // Field touch tracking for inline error messages
-  const [touched, setTouched] = useState({})
-  const [mobileError, setMobileError] = useState('')
-
-  // Track if this is a returning user whose profile is incomplete
-  const [isReturningIncomplete, setIsReturningIncomplete] = useState(false)
-
-  // Resend OTP Cooldown & Limits (30s cooldown, max 3 resends)
-  const [countdown, setCountdown] = useState(0)
-  const [resendCount, setResendCount] = useState(0)
+  // Resend OTP Cooldown (30s)
+  const [resendCooldown, setResendCooldown] = useState(0)
   const timerRef = useRef(null)
 
-  // UI States
-  const [isLoading, setIsLoading] = useState(false)
+  // UI state
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [infoMessage, setInfoMessage] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [touched, setTouched] = useState({})
 
-  // Input refs for 6-digit OTP
-  const otpInputRefs = useRef([])
-
-  // Redirect if already authenticated AND profile is complete
-  useEffect(() => {
-    let active = true
-    if (user && step !== 'new-user') {
-      getMe().then(({ data }) => {
-        if (!active) return
-        if (data?.profileComplete === false) {
-          setIsReturningIncomplete(true)
-          if (data.user?.fullName) setFullName(data.user.fullName)
-          if (data.user?.mobile) setMobileNumber(data.user.mobile.replace(/^\+91/, ''))
-          setStep('new-user')
-        } else {
-          navigate(safeRedirect, { replace: true })
-        }
-      }).catch(() => {
-        if (active) navigate(safeRedirect, { replace: true })
-      })
-    }
-    return () => { active = false }
-  }, [user, navigate, safeRedirect, step])
-
+  // Clear timers on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
-      if (pincodeAbortRef.current) pincodeAbortRef.current.abort()
     }
   }, [])
 
   const startResendTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current)
-    setCountdown(30)
+    setResendCooldown(30)
     timerRef.current = setInterval(() => {
-      setCountdown((prev) => {
+      setResendCooldown((prev) => {
         if (prev <= 1) {
           clearInterval(timerRef.current)
           return 0
@@ -162,1055 +151,1345 @@ export default function Auth() {
     }, 1000)
   }
 
-  const markTouched = (field) => {
-    setTouched((prev) => ({ ...prev, [field]: true }))
-  }
+  // Update district options when state changes
+  const districts = selectedState ? indiaDistricts[selectedState] || [] : []
 
-  // ================= FIELD VALIDATIONS =================
-  const isFullNameValid = fullName.trim().length >= 2 && fullName.trim().length <= 80
-  const isMobileValid = Boolean(normalizeIndianPhoneNumber(mobileNumber))
-  const isPasswordValid = Boolean(newPassword && /^(?=.*[a-zA-Z])(?=.*\d).{8,72}$/.test(newPassword))
-  const isConfirmPasswordValid = Boolean(confirmPassword && confirmPassword === newPassword)
-  const isLine1Valid = line1.trim().length >= 5 && line1.trim().length <= 120
-  const isStateValid = Boolean(stateName && indiaStates.some((s) => s.name === stateName))
-  const isDistrictValid = Boolean(
-    district &&
-    stateName &&
-    indiaDistricts[stateName] &&
-    indiaDistricts[stateName].some((d) => d.toLowerCase() === district.trim().toLowerCase())
-  )
-  const isPincodeValid = /^[1-9][0-9]{5}$/.test(pincode.trim())
-
-  const isFormValid = Boolean(
-    isFullNameValid &&
-    isMobileValid &&
-    isPasswordValid &&
-    isConfirmPasswordValid &&
-    isLine1Valid &&
-    isDistrictValid &&
-    isStateValid &&
-    isPincodeValid
-  )
-
-  // ================= PINCODE LOOKUP & LOCATION HANDLERS =================
-  const handlePincodeChange = async (e) => {
-    const rawVal = e.target.value.replace(/\D/g, '').slice(0, 6)
-    setPincode(rawVal)
-    setPincodeLookupError('')
-    setPincodeLookupMessage('')
-
-    // Abort previous lookup if still pending
-    if (pincodeAbortRef.current) {
-      pincodeAbortRef.current.abort()
-      pincodeAbortRef.current = null
-    }
-
-    if (rawVal.length === 6) {
-      if (rawVal.startsWith('0')) {
-        setPincodeLookupError('PIN code cannot start with 0.')
-        return
-      }
-
-      const controller = new AbortController()
-      pincodeAbortRef.current = controller
-      setIsPincodeLoading(true)
-
-      try {
-        const result = await lookupPincode(rawVal, controller.signal)
-        setIsPincodeLoading(false)
-
-        if (!result.success) {
-          setPincodeLookupError(
-            result.error || "We couldn't find this pincode. Please select your state and district manually."
-          )
-          return
-        }
-
-        // Auto-fill state if matched
-        if (result.state) {
-          setStateName(result.state)
-          markTouched('stateName')
-
-          // If district matched, auto-select it; otherwise prompt user to select manually
-          if (result.districtMatched && result.district) {
-            setDistrict(result.district)
-            markTouched('district')
-            setPincodeLookupMessage(`Found: ${result.district}, ${result.state}`)
-          } else {
-            setDistrict('')
-            setPincodeLookupMessage('Please choose your district.')
-          }
-        }
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          setIsPincodeLoading(false)
-          setPincodeLookupError(
-            "We couldn't find this pincode. Please select your state and district manually."
-          )
-        }
-      }
-    }
+  const clearFieldError = (field) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev
+      const next = { ...prev }
+      delete next[field]
+      return next
+    })
   }
 
   const handleStateChange = (e) => {
-    const selectedState = e.target.value
-    setStateName(selectedState)
-    setDistrict('') // Resets district whenever state changes
-    setPincodeLookupMessage('')
-    markTouched('stateName')
+    const newState = e.target.value
+    setSelectedState(newState)
+    setSelectedDistrict('')
+    clearFieldError('state')
+    clearFieldError('district')
   }
 
-  const handleDistrictChange = (e) => {
-    setDistrict(e.target.value)
-    setPincodeLookupMessage('')
-    markTouched('district')
-  }
-
-  // ================= 1. GOOGLE SIGN-IN =================
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true)
+  const handleModeSwitch = (newMode) => {
+    setMode(newMode)
     setErrorMessage('')
-    const callbackTarget = `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`
-    const { error } = await signInWithGoogle(callbackTarget)
-    if (error) {
-      setErrorMessage(error.message || 'Google sign-in could not be completed.')
-      setIsLoading(false)
+    setInfoMessage('')
+    setFieldErrors({})
+    setTouched({})
+    const newParams = new URLSearchParams()
+    newParams.set('mode', newMode)
+    setSearchParams(newParams, { replace: true })
+  }
+
+  const validateField = (field, value) => {
+    switch (field) {
+      case 'email': {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!value.trim()) return 'Email address is required.'
+        if (!emailRegex.test(value.trim())) return 'Please enter a valid email address.'
+        return ''
+      }
+      case 'password': {
+        if (!value) return 'Password is required.'
+        if (value.length < 8) return 'Password must be at least 8 characters.'
+        if (!/[A-Za-z]/.test(value) || !/[0-9]/.test(value)) {
+          return 'Password must contain at least one letter and one number.'
+        }
+        return ''
+      }
+      case 'fullName': {
+        if (!value.trim()) return 'Full name is required.'
+        if (value.trim().length < 2) return 'Full name must be at least 2 characters.'
+        if (value.trim().length > 80) return 'Full name must not exceed 80 characters.'
+        return ''
+      }
+      case 'mobile': {
+        const cleaned = value.replace(/\D/g, '')
+        if (!cleaned) return 'Mobile number is required.'
+        if (cleaned.length !== 10) return 'Enter a valid 10-digit mobile number.'
+        if (!/^[6-9]/.test(cleaned)) return 'Indian mobile numbers must begin with 6, 7, 8, or 9.'
+        return ''
+      }
+      case 'confirmPassword': {
+        if (!value) return 'Please confirm your password.'
+        if (value !== password) return 'Passwords do not match.'
+        return ''
+      }
+      case 'confirmNewPassword': {
+        if (!value) return 'Please confirm your password.'
+        if (value !== newPassword) return 'Passwords do not match.'
+        return ''
+      }
+      case 'addressLine1': {
+        if (!value.trim()) return 'Address Line 1 is required.'
+        if (value.trim().length < 5) return 'Address must be at least 5 characters.'
+        if (value.trim().length > 120) return 'Address must not exceed 120 characters.'
+        return ''
+      }
+      case 'landmark': {
+        if (value && value.trim().length > 80) return 'Landmark cannot exceed 80 characters.'
+        return ''
+      }
+      case 'state': {
+        if (!value) return 'Please select your state.'
+        return ''
+      }
+      case 'district': {
+        if (!value) return 'Please select your district.'
+        return ''
+      }
+      case 'pincode': {
+        if (!value.trim()) return 'Pincode is required.'
+        if (!/^[1-9][0-9]{5}$/.test(value.trim())) {
+          return 'Enter a valid 6-digit postal code (cannot start with 0).'
+        }
+        return ''
+      }
+      default:
+        return ''
     }
   }
 
-  // ================= 2. EMAIL OTP REQUEST =================
-  const handleSendEmailOtp = async (e) => {
-    if (e) e.preventDefault()
+  const handleBlur = (field) => {
+    setTouched((prev) => ({ ...prev, [field]: true }))
+    let val = ''
+    if (field === 'email') val = email
+    else if (field === 'password') val = password
+    else if (field === 'fullName') val = fullName
+    else if (field === 'mobile') val = mobile
+    else if (field === 'confirmPassword') val = confirmPassword
+    else if (field === 'addressLine1') val = addressLine1
+    else if (field === 'landmark') val = landmark
+    else if (field === 'state') val = selectedState
+    else if (field === 'district') val = selectedDistrict
+    else if (field === 'pincode') val = pincode
+
+    const error = validateField(field, val)
+    setFieldErrors((prev) => ({ ...prev, [field]: error }))
+  }
+
+  // Submit Handler for Auth (Login & Signup)
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault()
     setErrorMessage('')
     setInfoMessage('')
 
-    const cleanEmail = email.trim().toLowerCase()
-    if (!cleanEmail || !cleanEmail.includes('@')) {
-      setErrorMessage('Please enter a valid email address.')
-      return
-    }
+    if (mode === 'login') {
+      const emailErr = validateField('email', email)
+      const passErr = validateField('password', password)
 
-    if (resendCount >= 3) {
-      setErrorMessage('Maximum resend attempts reached. Please check your inbox or try again in 15 minutes.')
-      return
-    }
-
-    setIsLoading(true)
-    const { error } = await sendOtp(cleanEmail)
-    setIsLoading(false)
-
-    if (error) {
-      setErrorMessage(error.message)
-      return
-    }
-
-    setResendCount((prev) => prev + 1)
-    setStep('code')
-    setOtpDigits(['', '', '', '', '', ''])
-    setInfoMessage(`We've sent a 6-digit verification code to ${cleanEmail}.`)
-    startResendTimer()
-
-    setTimeout(() => {
-      if (otpInputRefs.current[0]) {
-        otpInputRefs.current[0].focus()
+      if (emailErr || passErr) {
+        setFieldErrors({ email: emailErr, password: passErr })
+        setTouched({ email: true, password: true })
+        return
       }
-    }, 100)
-  }
 
-  // ================= 3. OTP DIGIT INPUT HANDLING =================
-  const handleOtpChange = (index, value) => {
-    const char = value.replace(/\D/g, '').slice(-1)
-    const updated = [...otpDigits]
-    updated[index] = char
-    setOtpDigits(updated)
+      setIsSubmitting(true)
+      const res = await login({ email, password })
+      setIsSubmitting(false)
 
-    if (char && index < 5) {
-      otpInputRefs.current[index + 1]?.focus()
-    }
-
-    if (char && index === 5 && updated.every((d) => d !== '')) {
-      submitVerifyOtp(updated.join(''))
-    }
-  }
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
-      otpInputRefs.current[index - 1]?.focus()
-    }
-  }
-
-  const handleOtpPaste = (e) => {
-    e.preventDefault()
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
-    if (!pasted) return
-
-    const updated = [...otpDigits]
-    for (let i = 0; i < 6; i++) {
-      updated[i] = pasted[i] || ''
-    }
-    setOtpDigits(updated)
-
-    if (pasted.length === 6) {
-      otpInputRefs.current[5]?.focus()
-      submitVerifyOtp(pasted)
+      if (res.success) {
+        navigate('/', { replace: true })
+      } else {
+        if (res.code === 'EMAIL_NOT_VERIFIED') {
+          // Unverified account: transition to signup_verify step
+          setOtpEmail(res.email || email)
+          setOtpDigits(['', '', '', '', '', ''])
+          setStep('signup_verify')
+          startResendTimer()
+          setInfoMessage('Your email address is not yet verified. A fresh code has been sent.')
+        } else {
+          if (Array.isArray(res.errors) && res.errors.length > 0) {
+            const newFieldErrors = {}
+            const unmappedErrors = []
+            res.errors.forEach((item) => {
+              if (!item) return
+              const rawField = item.field
+              const msg = item.message
+              const mappedField = FIELD_NAME_MAP[rawField] || rawField
+              if (mappedField === 'email' || mappedField === 'password') {
+                newFieldErrors[mappedField] = msg
+              } else if (msg) {
+                unmappedErrors.push(msg)
+              }
+            })
+            if (Object.keys(newFieldErrors).length > 0) {
+              setFieldErrors((prev) => ({ ...prev, ...newFieldErrors }))
+            }
+            if (unmappedErrors.length > 0) {
+              setErrorMessage(unmappedErrors.join('. '))
+            } else if (res.error) {
+              setErrorMessage(res.error)
+            }
+          } else {
+            setErrorMessage(res.error || 'Invalid email or password.')
+          }
+        }
+      }
     } else {
-      const nextFocus = Math.min(pasted.length, 5)
-      otpInputRefs.current[nextFocus]?.focus()
-    }
-  }
+      // Sign Up validation
+      const errors = {
+        fullName: validateField('fullName', fullName),
+        email: validateField('email', email),
+        mobile: validateField('mobile', mobile),
+        password: validateField('password', password),
+        confirmPassword: validateField('confirmPassword', confirmPassword),
+        addressLine1: validateField('addressLine1', addressLine1),
+        landmark: validateField('landmark', landmark),
+        state: validateField('state', selectedState),
+        district: validateField('district', selectedDistrict),
+        pincode: validateField('pincode', pincode),
+      }
 
-  // ================= 4. VERIFY OTP SUBMISSION =================
-  const submitVerifyOtp = async (codeToVerify) => {
-    const token = codeToVerify || otpDigits.join('')
-    if (token.length !== 6) {
-      setErrorMessage('Please enter all 6 digits of the verification code.')
-      return
-    }
+      setFieldErrors(errors)
+      setTouched({
+        fullName: true,
+        email: true,
+        mobile: true,
+        password: true,
+        confirmPassword: true,
+        addressLine1: true,
+        landmark: true,
+        state: true,
+        district: true,
+        pincode: true,
+      })
 
-    setIsLoading(true)
-    setErrorMessage('')
+      const hasError = Object.values(errors).some(Boolean)
+      if (hasError) {
+        setErrorMessage('Please correct the highlighted fields before submitting.')
+        return
+      }
 
-    const { data, error } = await verifyOtp(email, token)
-    setIsLoading(false)
-
-    if (error) {
-      setErrorMessage(error.message || 'Invalid or expired code. Please try again.')
-      return
-    }
-
-    // Prompt new customers or returning users without complete profile
-    if (data?.isNewUser || data?.user?.profileComplete === false) {
-      setIsReturningIncomplete(!data?.isNewUser && data?.user?.profileComplete === false)
-      if (data?.user?.fullName) setFullName(data.user.fullName)
-      if (data?.user?.mobile) setMobileNumber(data.user.mobile.replace(/^\+91/, ''))
-      setStep('new-user')
-    } else {
-      navigate(safeRedirect, { replace: true })
-    }
-  }
-
-  // ================= 5. COMPLETE PROFILE SUBMISSION =================
-  const handleSaveProfile = async (e) => {
-    e.preventDefault()
-    setErrorMessage('')
-    setMobileError('')
-
-    const normalizedPhone = normalizeIndianPhoneNumber(mobileNumber)
-    if (!normalizedPhone) {
-      setMobileError('Please enter a valid 10-digit Indian mobile number starting with 6-9.')
-      return
-    }
-
-    if (!isFormValid) {
-      setErrorMessage('Please review and complete all required fields.')
-      return
-    }
-
-    setIsLoading(true)
-
-    const payload = {
-      fullName: fullName.trim(),
-      mobile: normalizedPhone,
-      password: newPassword,
-      confirmPassword,
-      address: {
-        line1: line1.trim(),
+      setIsSubmitting(true)
+      const payload = {
+        fullName: fullName.trim(),
+        email: email.trim().toLowerCase(),
+        mobile: mobile.replace(/\D/g, ''),
+        password,
+        addressLine1: addressLine1.trim(),
         landmark: landmark.trim() || undefined,
-        district: district.trim(),
-        city: district.trim(),
-        state: stateName.trim(),
+        state: selectedState,
+        district: selectedDistrict,
         pincode: pincode.trim(),
         country: 'India',
-      },
-    }
-
-    const { error, status } = await createAccount(payload)
-    setIsLoading(false)
-
-    if (error) {
-      if (status === 409) {
-        if (error.message.toLowerCase().includes('mobile') || error.message.toLowerCase().includes('already registered')) {
-          setMobileError(error.message)
-        } else {
-          setErrorMessage(error.message)
-        }
-      } else {
-        setErrorMessage(error.message || 'Failed to complete registration. Please try again.')
       }
-      return
-    }
 
-    navigate(safeRedirect, { replace: true })
+      const res = await signup(payload)
+      setIsSubmitting(false)
+
+      if (res.success && res.status === 'verification_required') {
+        setOtpEmail(res.email || email)
+        setOtpDigits(['', '', '', '', '', ''])
+        setStep('signup_verify')
+        startResendTimer()
+        setInfoMessage('We sent a 6-digit verification code to your email address.')
+      } else {
+        if (Array.isArray(res.errors) && res.errors.length > 0) {
+          const newFieldErrors = {}
+          const unmappedErrors = []
+          res.errors.forEach((item) => {
+            if (!item) return
+            const rawField = item.field
+            const msg = item.message
+            const mappedField = FIELD_NAME_MAP[rawField] || rawField
+
+            if (VALID_FIELD_KEYS.has(mappedField)) {
+              newFieldErrors[mappedField] = msg
+            } else if (msg) {
+              unmappedErrors.push(msg)
+            }
+          })
+          if (Object.keys(newFieldErrors).length > 0) {
+            setFieldErrors((prev) => ({ ...prev, ...newFieldErrors }))
+          }
+          if (unmappedErrors.length > 0) {
+            setErrorMessage(unmappedErrors.join('. '))
+          } else if (res.error) {
+            setErrorMessage(res.error)
+          }
+        } else {
+          setErrorMessage(res.error || 'Registration failed. Please try again.')
+        }
+      }
+    }
   }
 
-  // ================= 6. PASSWORD LOGIN =================
-  const handlePasswordLogin = async (e) => {
+  // Handler for Signup OTP verification
+  const handleVerifySignupOtp = async (e) => {
     e.preventDefault()
     setErrorMessage('')
+    setInfoMessage('')
 
-    const cleanEmail = email.trim().toLowerCase()
-    if (!cleanEmail || !cleanEmail.includes('@')) {
-      setErrorMessage('Please enter a valid email address.')
+    const code = otpDigits.join('').trim()
+    if (code.length !== 6) {
+      setErrorMessage('Please enter the complete 6-digit verification code.')
       return
     }
 
-    if (!password) {
-      setErrorMessage('Please enter your password.')
-      return
-    }
+    setIsSubmitting(true)
+    const res = await verifySignup({ email: otpEmail, code })
+    setIsSubmitting(false)
 
-    setIsLoading(true)
-    const { data, error } = await signInWithEmailPassword(cleanEmail, password)
-    setIsLoading(false)
-
-    if (error) {
-      setErrorMessage(error.message || 'Invalid email or password.')
-      return
-    }
-
-    if (data?.user?.profileComplete === false) {
-      setIsReturningIncomplete(true)
-      if (data?.user?.fullName) setFullName(data.user.fullName)
-      if (data?.user?.mobile) setMobileNumber(data.user.mobile.replace(/^\+91/, ''))
-      setStep('new-user')
+    if (res.success) {
+      navigate('/', { replace: true })
     } else {
-      navigate(safeRedirect, { replace: true })
+      setErrorMessage(res.error || 'Invalid or expired verification code.')
+    }
+  }
+
+  // Resend Signup OTP Handler
+  const handleResendSignupCode = async () => {
+    if (resendCooldown > 0 || isSubmitting) return
+    setErrorMessage('')
+    setIsSubmitting(true)
+    const res = await resendSignup({ email: otpEmail })
+    setIsSubmitting(false)
+    startResendTimer()
+    setInfoMessage('A new verification code has been dispatched.')
+  }
+
+  // Handler for Forgot Password Email Request
+  const handleForgotPasswordSubmit = async (e) => {
+    e.preventDefault()
+    setErrorMessage('')
+    setInfoMessage('')
+
+    const err = validateField('email', email)
+    if (err) {
+      setErrorMessage(err)
+      return
+    }
+
+    setIsSubmitting(true)
+    await forgotPassword({ email: email.trim().toLowerCase() })
+    setIsSubmitting(false)
+
+    setOtpEmail(email.trim().toLowerCase())
+    setOtpDigits(['', '', '', '', '', ''])
+    setStep('forgot_verify')
+    startResendTimer()
+    setInfoMessage('If that email is registered, a 6-digit code has been sent.')
+  }
+
+  // Handler for Password Reset OTP Verification
+  const handleVerifyResetOtp = async (e) => {
+    e.preventDefault()
+    setErrorMessage('')
+    setInfoMessage('')
+
+    const code = otpDigits.join('').trim()
+    if (code.length !== 6) {
+      setErrorMessage('Please enter the complete 6-digit code.')
+      return
+    }
+
+    setIsSubmitting(true)
+    const res = await verifyPasswordReset({ email: otpEmail, code })
+    setIsSubmitting(false)
+
+    if (res.success && res.resetToken) {
+      setResetToken(res.resetToken)
+      setStep('forgot_reset')
+      setInfoMessage('Code verified. You may now enter your new password.')
+    } else {
+      setErrorMessage(res.error || 'Invalid or expired code.')
+    }
+  }
+
+  // Resend Reset Code Handler
+  const handleResendResetCode = async () => {
+    if (resendCooldown > 0 || isSubmitting) return
+    setErrorMessage('')
+    setIsSubmitting(true)
+    await forgotPassword({ email: otpEmail })
+    setIsSubmitting(false)
+    startResendTimer()
+    setInfoMessage('A fresh reset code has been dispatched.')
+  }
+
+  // Handler for Final New Password Reset Submission
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault()
+    setErrorMessage('')
+    setInfoMessage('')
+
+    const passErr = validateField('password', newPassword)
+    const confirmErr = validateField('confirmNewPassword', confirmNewPassword)
+
+    if (passErr || confirmErr) {
+      setErrorMessage(passErr || confirmErr)
+      return
+    }
+
+    setIsSubmitting(true)
+    const res = await resetPassword({
+      resetToken,
+      password: newPassword,
+      confirmPassword: confirmNewPassword,
+    })
+    setIsSubmitting(false)
+
+    if (res.success) {
+      navigate('/', { replace: true })
+    } else {
+      setErrorMessage(res.error || 'Failed to reset password. Please try again.')
     }
   }
 
   return (
-    <main className="min-h-[80vh] flex items-center justify-center bg-zinc-950 py-10 px-4 sm:px-6">
-      <div className="w-full max-w-[420px] rounded-2xl bg-zinc-900/90 border border-zinc-800 p-6 sm:p-8 shadow-2xl backdrop-blur-md">
-        {/* Brand Header */}
-        <div className="text-center mb-6">
+    <main className="min-h-[calc(100vh-80px)] w-full bg-zinc-950 flex flex-col items-center justify-center py-8 px-4 sm:px-6 overflow-x-hidden selection:bg-orange-500 selection:text-black">
+      {/* Container: 420px max width for precise automotive card layout */}
+      <div className="w-full max-w-[420px] mx-auto flex flex-col items-center">
+        {/* Brand Icon & Heading */}
+        <div className="flex flex-col items-center mb-6 text-center">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-white font-black tracking-wider text-base uppercase mb-3 hover:text-orange-400 transition-colors"
+            className="w-12 h-12 rounded-xl bg-gradient-to-br from-zinc-800 to-black border border-orange-500/30 flex items-center justify-center text-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.2)] hover:border-orange-500/60 transition-all mb-3"
+            aria-label="AirTouch Engineering Home"
           >
-            <Gauge className="w-5 h-5 text-orange-500" />
-            <span>AirTouch Engineering</span>
+            <Gauge className="w-6 h-6" />
           </Link>
-          <div className="h-0.5 w-12 bg-orange-500 mx-auto rounded-full" />
+          <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white">
+            AirTouch <span className="text-orange-500">Engineering</span>
+          </h1>
+          <p className="text-xs text-zinc-400 mt-1">
+            {step === 'signup_verify' && 'Verify your email to activate account'}
+            {step === 'forgot_email' && 'Reset your customer account password'}
+            {step === 'forgot_verify' && 'Enter the 6-digit password reset code'}
+            {step === 'forgot_reset' && 'Create a strong, new password'}
+            {step === 'auth' && (mode === 'login' ? 'Sign in to access your garage & orders' : 'Create a customer account for swift checkout')}
+          </p>
         </div>
 
-        {/* Global Error Banner */}
-        {errorMessage && (
-          <div
-            role="alert"
-            aria-live="polite"
-            className="mb-5 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-start gap-2.5 text-xs text-rose-300 animate-in fade-in duration-200"
-          >
-            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-            <span className="leading-relaxed">{errorMessage}</span>
-          </div>
-        )}
-
-        {/* Info Banner */}
-        {infoMessage && !errorMessage && (
-          <div
-            role="status"
-            aria-live="polite"
-            className="mb-5 p-3 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-start gap-2.5 text-xs text-orange-300 animate-in fade-in duration-200"
-          >
-            <CheckCircle2 className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
-            <span className="leading-relaxed">{infoMessage}</span>
-          </div>
-        )}
-
-        {/* ================= STEP 1: CHOICE SCREEN ================= */}
-        {step === 'choice' && (
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black text-white text-center tracking-tight">
-              Sign In or Register
-            </h1>
-            <p className="mt-1.5 text-xs text-zinc-400 text-center leading-relaxed">
-              Access your saved orders, garage specifications, and high-performance cart.
-            </p>
-
-            <div className="mt-6 space-y-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setErrorMessage('')
-                  setStep('email')
-                }}
-                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_24px_rgba(249,115,22,0.35)] transition-all cursor-pointer"
-              >
-                <Mail className="w-4 h-4" />
-                <span>Continue with Email OTP</span>
-                <ArrowRight className="w-4 h-4 ml-auto stroke-[2.5]" />
-              </button>
-
-              <button
-                type="button"
-                onClick={handleGoogleSignIn}
-                disabled={isLoading}
-                className="w-full py-3 px-4 rounded-xl bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-white font-bold text-xs flex items-center justify-center gap-3 transition-colors cursor-pointer disabled:opacity-50"
-              >
-                <GoogleIcon />
-                <span>Continue with Google</span>
-              </button>
-
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-zinc-800" />
-                </div>
-                <div className="relative flex justify-center text-[10px] uppercase tracking-widest text-zinc-500">
-                  <span className="bg-zinc-900 px-3 font-semibold">Or use credentials</span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setErrorMessage('')
-                  setStep('password')
-                }}
-                className="w-full py-3 px-4 rounded-xl bg-zinc-950/60 hover:bg-zinc-800/80 border border-zinc-800/80 text-zinc-300 hover:text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
-              >
-                <Lock className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Log in with Password</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ================= STEP 2: EMAIL INPUT ================= */}
-        {step === 'email' && (
-          <div>
-            <button
-              type="button"
-              onClick={() => {
-                setErrorMessage('')
-                setStep('choice')
-              }}
-              className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white mb-4 transition-colors cursor-pointer"
+        {/* Card */}
+        <div className="w-full bg-zinc-900/90 border border-zinc-800/90 rounded-2xl shadow-2xl p-6 sm:p-7 backdrop-blur-md">
+          {/* Top Info Alert Banner */}
+          {infoMessage && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="mb-4 p-3 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-start gap-2.5 text-orange-400 text-xs"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to options</span>
-            </button>
+              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+              <span className="leading-relaxed font-medium">{infoMessage}</span>
+            </div>
+          )}
 
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Enter Your Email
-            </h1>
-            <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
-              We'll send a 6-digit verification code to sign you in or create your account.
-            </p>
-
-            <form onSubmit={handleSendEmailOtp} className="mt-6 space-y-4">
-              <div>
-                <label htmlFor="auth-email" className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    id="auth-email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    autoFocus
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="racer@airtouch.engineering"
-                    className="w-full bg-zinc-950 border border-zinc-800 focus:border-orange-500 text-sm text-white rounded-xl py-3 pl-10 pr-4 outline-none transition-colors placeholder-zinc-600 focus:ring-1 focus:ring-orange-500"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading || !email.trim()}
-                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_24px_rgba(249,115,22,0.35)] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-black" />
-                    <span>Sending code...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Send Verification Code</span>
-                    <ArrowRight className="w-4 h-4 stroke-[2.5]" />
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {/* ================= STEP 3: 6-DIGIT OTP VERIFICATION ================= */}
-        {step === 'code' && (
-          <div>
-            <button
-              type="button"
-              onClick={() => {
-                setErrorMessage('')
-                setStep('email')
-              }}
-              className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white mb-4 transition-colors cursor-pointer"
+          {/* Top Error Alert Banner with aria-live="polite" */}
+          {errorMessage && (
+            <div
+              role="alert"
+              aria-live="polite"
+              className="mb-4 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-start gap-2.5 text-rose-400 text-xs"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Change email</span>
-            </button>
-
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Verify with Code
-            </h1>
-            <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
-              Enter the 6-digit code sent to your email. Check your spam folder if it doesn’t arrive shortly.
-            </p>
-
-            <div className="mt-6">
-              <div
-                className="grid grid-cols-6 gap-2 sm:gap-2.5"
-                onPaste={handleOtpPaste}
-              >
-                {otpDigits.map((digit, idx) => (
-                  <input
-                    key={idx}
-                    ref={(el) => (otpInputRefs.current[idx] = el)}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleOtpChange(idx, e.target.value)}
-                    onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                    aria-label={`Digit ${idx + 1} of verification code`}
-                    className="w-full aspect-square text-center text-lg sm:text-xl font-mono font-black text-white bg-zinc-950 border border-zinc-800 rounded-xl focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-colors"
-                  />
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => submitVerifyOtp()}
-                disabled={isLoading || otpDigits.join('').length !== 6}
-                className="mt-5 w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_24px_rgba(249,115,22,0.35)] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-black" />
-                    <span>Verifying...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Verify & Continue</span>
-                    <ArrowRight className="w-4 h-4 stroke-[2.5]" />
-                  </>
-                )}
-              </button>
-
-              <div className="mt-5 text-center">
-                {countdown > 0 ? (
-                  <p className="text-xs text-zinc-500">
-                    Resend code in{' '}
-                    <span className="font-mono font-bold text-orange-400">
-                      {countdown}s
-                    </span>
-                  </p>
-                ) : resendCount >= 3 ? (
-                  <p className="text-xs text-zinc-500">
-                    Max resend attempts reached. Please check your spam folder or wait 15 minutes.
-                  </p>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleSendEmailOtp()}
-                    className="text-xs font-semibold text-orange-400 hover:text-orange-300 underline cursor-pointer"
-                  >
-                    Didn’t get a code? Resend
-                  </button>
-                )}
-              </div>
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span className="leading-relaxed font-medium">{errorMessage}</span>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ================= STEP 4: REQUIRED SIGN-UP / COMPLETE PROFILE ================= */}
-        {step === 'new-user' && (
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-3">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Email Verified</span>
-            </div>
-
-            {isReturningIncomplete && (
+          {/* ================= STEP 1: MAIN AUTH (LOGIN | SIGN UP) ================= */}
+          {step === 'auth' && (
+            <>
+              {/* Segmented Mode Toggle: Login | Sign Up */}
               <div
-                role="alert"
-                aria-live="polite"
-                className="mb-4 p-3 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-start gap-2.5 text-xs text-orange-300 animate-in fade-in duration-200"
+                role="tablist"
+                aria-label="Authentication mode"
+                className="grid grid-cols-2 p-1 bg-zinc-950/80 rounded-xl border border-zinc-800 mb-6"
               >
-                <AlertCircle className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
-                <span className="leading-relaxed font-semibold">Please complete your profile to continue.</span>
-              </div>
-            )}
-
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              {isReturningIncomplete ? 'Complete Your Profile' : 'Customer Account Details'}
-            </h1>
-            <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
-              Set up your courier delivery profile and password. All marked fields (<span className="text-orange-400 font-bold">*</span>) are required.
-            </p>
-
-            <form onSubmit={handleSaveProfile} className="mt-5 space-y-4">
-              {/* Full Name */}
-              <div>
-                <label htmlFor="auth-full-name" className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1">
-                  Full Name <span className="text-orange-400">*</span>
-                </label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    id="auth-full-name"
-                    type="text"
-                    autoComplete="name"
-                    required
-                    aria-required="true"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    onBlur={() => markTouched('fullName')}
-                    placeholder="Marc Márquez"
-                    className={`w-full bg-zinc-950 border text-sm text-white rounded-xl py-2.5 pl-10 pr-4 outline-none transition-colors placeholder-zinc-600 focus:ring-1 ${
-                      touched.fullName && !isFullNameValid
-                        ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
-                        : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
-                    }`}
-                  />
-                </div>
-                {touched.fullName && !isFullNameValid && (
-                  <p className="mt-1 text-[11px] text-rose-400">Full name must be between 2 and 80 characters.</p>
-                )}
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === 'login'}
+                  onClick={() => handleModeSwitch('login')}
+                  className={`py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-200 cursor-pointer ${
+                    mode === 'login'
+                      ? 'bg-orange-500 text-black shadow-md'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  Log In
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === 'signup'}
+                  onClick={() => handleModeSwitch('signup')}
+                  className={`py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-200 cursor-pointer ${
+                    mode === 'signup'
+                      ? 'bg-orange-500 text-black shadow-md'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  Sign Up
+                </button>
               </div>
 
-              {/* Mobile Number */}
-              <div>
-                <label htmlFor="auth-mobile" className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1">
-                  Mobile Number <span className="text-orange-400">*</span>
-                </label>
-                <div className="relative">
-                  <span className="text-xs font-mono font-bold text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2">
-                    +91
-                  </span>
-                  <input
-                    id="auth-mobile"
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel-national"
-                    required
-                    aria-required="true"
-                    value={mobileNumber}
-                    onChange={(e) => {
-                      setMobileNumber(e.target.value)
-                      if (mobileError) setMobileError('')
-                    }}
-                    onBlur={() => markTouched('mobile')}
-                    placeholder="9876543210"
-                    className={`w-full bg-zinc-950 border text-sm text-white rounded-xl py-2.5 pl-12 pr-4 outline-none transition-colors placeholder-zinc-600 focus:ring-1 ${
-                      (touched.mobile && !isMobileValid) || mobileError
-                        ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
-                        : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
-                    }`}
-                  />
-                </div>
-                {mobileError ? (
-                  <p className="mt-1 text-[11px] text-rose-400 font-semibold">{mobileError}</p>
-                ) : (
-                  touched.mobile && !isMobileValid && (
-                    <p className="mt-1 text-[11px] text-rose-400">
-                      Enter a valid 10-digit Indian mobile starting with 6–9.
-                    </p>
-                  )
-                )}
-              </div>
-
-              {/* Password */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="auth-new-pwd" className="block text-xs font-bold uppercase tracking-wider text-zinc-300">
-                    Password <span className="text-orange-400">*</span>
-                  </label>
-                  <span className="text-[10px] text-zinc-500">8–72 chars, letter & number</span>
-                </div>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    id="auth-new-pwd"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    required
-                    aria-required="true"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    onBlur={() => markTouched('newPassword')}
-                    placeholder="••••••••"
-                    className={`w-full bg-zinc-950 border text-sm text-white rounded-xl py-2.5 pl-10 pr-10 outline-none transition-colors placeholder-zinc-600 focus:ring-1 ${
-                      touched.newPassword && !isPasswordValid
-                        ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
-                        : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {touched.newPassword && !isPasswordValid && (
-                  <p className="mt-1 text-[11px] text-rose-400">
-                    Must be 8–72 characters and contain at least one letter and one number.
-                  </p>
-                )}
-              </div>
-
-              {/* Confirm Password */}
-              <div>
-                <label htmlFor="auth-confirm-pwd" className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1">
-                  Confirm Password <span className="text-orange-400">*</span>
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    id="auth-confirm-pwd"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    required
-                    aria-required="true"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    onBlur={() => markTouched('confirmPassword')}
-                    placeholder="••••••••"
-                    className={`w-full bg-zinc-950 border text-sm text-white rounded-xl py-2.5 pl-10 pr-10 outline-none transition-colors placeholder-zinc-600 focus:ring-1 ${
-                      touched.confirmPassword && !isConfirmPasswordValid
-                        ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
-                        : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
-                  >
-                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {touched.confirmPassword && !isConfirmPasswordValid && (
-                  <p className="mt-1 text-[11px] text-rose-400">Passwords do not match.</p>
-                )}
-              </div>
-
-              {/* Section Divider: Courier Shipping Address */}
-              <div className="pt-2 border-t border-zinc-800">
-                <div className="flex items-center gap-2 mb-3">
-                  <MapPin className="w-3.5 h-3.5 text-orange-500" />
-                  <span className="text-xs font-black uppercase tracking-wider text-zinc-200">
-                    Courier Delivery Address
-                  </span>
-                </div>
-
-                {/* Address Line 1 */}
-                <div className="space-y-3">
+              {/* Form */}
+              <form onSubmit={handleAuthSubmit} noValidate className="space-y-4">
+                {/* Sign Up: Full Name */}
+                {mode === 'signup' && (
                   <div>
-                    <label htmlFor="auth-line1" className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1">
-                      Street Address <span className="text-orange-400">*</span>
+                    <label
+                      htmlFor="fullName"
+                      className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1.5"
+                    >
+                      Full Name <span className="text-orange-500">*</span>
                     </label>
-                    <input
-                      id="auth-line1"
-                      type="text"
-                      autoComplete="street-address"
-                      required
-                      aria-required="true"
-                      value={line1}
-                      onChange={(e) => setLine1(e.target.value)}
-                      onBlur={() => markTouched('line1')}
-                      placeholder="Plot 42, Sector 18, Industrial Area"
-                      className={`w-full bg-zinc-950 border text-sm text-white rounded-xl py-2.5 px-3.5 outline-none transition-colors placeholder-zinc-600 focus:ring-1 ${
-                        touched.line1 && !isLine1Valid
-                          ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
-                          : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
-                      }`}
-                    />
-                    {touched.line1 && !isLine1Valid && (
-                      <p className="mt-1 text-[11px] text-rose-400">Address must be between 5 and 120 characters.</p>
-                    )}
-                  </div>
-
-                  {/* Landmark (Optional) */}
-                  <div>
-                    <label htmlFor="auth-landmark" className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
-                      Landmark <span className="text-zinc-600 font-normal">(Opt)</span>
-                    </label>
-                    <input
-                      id="auth-landmark"
-                      type="text"
-                      value={landmark}
-                      onChange={(e) => setLandmark(e.target.value)}
-                      placeholder="Near Metro Station / Opposite Commercial Hub"
-                      className="w-full bg-zinc-950 border border-zinc-800 focus:border-orange-500 text-sm text-white rounded-xl py-2.5 px-3.5 outline-none transition-colors placeholder-zinc-600 focus:ring-1 focus:ring-orange-500"
-                    />
-                  </div>
-
-                  {/* Pincode with Postal Auto-Lookup & Country */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label htmlFor="auth-pincode" className="block text-xs font-bold uppercase tracking-wider text-zinc-300">
-                          PIN Code <span className="text-orange-400">*</span>
-                        </label>
-                        {isPincodeLoading && (
-                          <span className="flex items-center gap-1 text-[10px] text-orange-400 font-medium">
-                            <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                            <span>Looking up...</span>
-                          </span>
-                        )}
-                      </div>
+                    <div className="relative">
+                      <User className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <input
-                        id="auth-pincode"
+                        id="fullName"
+                        name="fullName"
                         type="text"
-                        inputMode="numeric"
-                        autoComplete="postal-code"
-                        maxLength={6}
                         required
-                        aria-required="true"
-                        value={pincode}
-                        onChange={handlePincodeChange}
-                        onBlur={() => markTouched('pincode')}
-                        placeholder="122015"
-                        className={`w-full bg-zinc-950 border text-sm font-mono text-white rounded-xl py-2.5 px-3.5 outline-none transition-colors placeholder-zinc-600 focus:ring-1 ${
-                          touched.pincode && !isPincodeValid
+                        autoComplete="name"
+                        value={fullName}
+                        onChange={(e) => {
+                          setFullName(e.target.value)
+                          clearFieldError('fullName')
+                        }}
+                        onBlur={() => handleBlur('fullName')}
+                        aria-invalid={Boolean(fieldErrors.fullName)}
+                        aria-describedby={fieldErrors.fullName ? 'fullName-error' : undefined}
+                        placeholder="Enter your full name"
+                        className={`w-full bg-zinc-950 border ${
+                          fieldErrors.fullName
                             ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
                             : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
-                        }`}
+                        } text-white text-xs rounded-xl pl-9 pr-3 py-2.5 placeholder-zinc-500 focus:outline-none focus:ring-1 transition-colors`}
                       />
-                      {touched.pincode && !isPincodeValid && (
-                        <p className="mt-1 text-[11px] text-rose-400">6 digits, cannot start with 0.</p>
-                      )}
-                      {pincodeLookupError && (
-                        <p className="mt-1 text-[11px] text-amber-400 flex items-start gap-1 leading-tight">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                          <span>{pincodeLookupError}</span>
-                        </p>
-                      )}
-                      {pincodeLookupMessage && !pincodeLookupError && (
-                        <p className="mt-1 text-[11px] text-emerald-400 flex items-center gap-1 leading-tight">
-                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                          <span>{pincodeLookupMessage}</span>
-                        </p>
-                      )}
                     </div>
-
-                    <div>
-                      <label htmlFor="auth-country" className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
-                        Country
-                      </label>
-                      <input
-                        id="auth-country"
-                        type="text"
-                        disabled
-                        value="India"
-                        className="w-full bg-zinc-950/60 border border-zinc-800 text-sm text-zinc-400 rounded-xl py-2.5 px-3.5 outline-none cursor-not-allowed"
-                      />
+                    <div aria-live="polite">
+                      {fieldErrors.fullName && (
+                        <p id="fullName-error" className="mt-1 text-[11px] text-rose-400 break-words">
+                          {fieldErrors.fullName}
+                        </p>
+                      )}
                     </div>
                   </div>
+                )}
 
-                  {/* State & District Dropdowns */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor="auth-state" className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1">
-                        State <span className="text-orange-400">*</span>
-                      </label>
-                      <div className="relative">
-                        <select
-                          id="auth-state"
-                          required
-                          aria-required="true"
-                          value={stateName}
-                          onChange={handleStateChange}
-                          onBlur={() => markTouched('stateName')}
-                          className={`w-full bg-zinc-950 border text-sm text-white rounded-xl py-2.5 pl-3.5 pr-8 outline-none transition-colors appearance-none focus:ring-1 cursor-pointer ${
-                            touched.stateName && !isStateValid
-                              ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
-                              : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
-                          }`}
-                        >
-                          <option value="" className="bg-zinc-900 text-zinc-500">
-                            Select State / UT
-                          </option>
-                          {indiaStates.map((s) => (
-                            <option key={s.code} value={s.name} className="bg-zinc-900 text-white">
-                              {s.name}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="w-4 h-4 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
-                      {touched.stateName && !isStateValid && (
-                        <p className="mt-1 text-[11px] text-rose-400">Please select your state.</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label htmlFor="auth-district" className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1">
-                        District <span className="text-orange-400">*</span>
-                      </label>
-                      <div className="relative">
-                        <select
-                          id="auth-district"
-                          required
-                          aria-required="true"
-                          disabled={!stateName}
-                          value={district}
-                          onChange={handleDistrictChange}
-                          onBlur={() => markTouched('district')}
-                          className={`w-full bg-zinc-950 border text-sm text-white rounded-xl py-2.5 pl-3.5 pr-8 outline-none transition-colors appearance-none focus:ring-1 ${
-                            !stateName ? 'opacity-50 cursor-not-allowed text-zinc-500' : 'cursor-pointer'
-                          } ${
-                            touched.district && !isDistrictValid
-                              ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
-                              : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
-                          }`}
-                        >
-                          <option value="" className="bg-zinc-900 text-zinc-500">
-                            {stateName ? 'Select District' : 'Select state first'}
-                          </option>
-                          {(stateName && indiaDistricts[stateName] ? indiaDistricts[stateName] : []).map((d) => (
-                            <option key={d} value={d} className="bg-zinc-900 text-white">
-                              {d}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="w-4 h-4 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
-                      {touched.district && !isDistrictValid && (
-                        <p className="mt-1 text-[11px] text-rose-400">Please select your district.</p>
-                      )}
-                    </div>
+                {/* Email Address (Both Modes) */}
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1.5"
+                  >
+                    Email Address <span className="text-orange-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value)
+                        clearFieldError('email')
+                      }}
+                      onBlur={() => handleBlur('email')}
+                      aria-invalid={Boolean(fieldErrors.email)}
+                      aria-describedby={fieldErrors.email ? 'email-error' : undefined}
+                      placeholder="name@example.com"
+                      className={`w-full bg-zinc-950 border ${
+                        fieldErrors.email
+                          ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
+                          : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
+                      } text-white text-xs rounded-xl pl-9 pr-3 py-2.5 placeholder-zinc-500 focus:outline-none focus:ring-1 transition-colors`}
+                    />
+                  </div>
+                  <div aria-live="polite">
+                    {fieldErrors.email && (
+                      <p id="email-error" className="mt-1 text-[11px] text-rose-400 break-words">
+                        {fieldErrors.email}
+                      </p>
+                    )}
                   </div>
                 </div>
-              </div>
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isLoading || !isFormValid}
-                className="w-full mt-4 py-3.5 px-4 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_24px_rgba(249,115,22,0.35)] transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-black" />
-                    <span>Saving details...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Complete Registration</span>
-                    <ArrowRight className="w-4 h-4 stroke-[2.5]" />
-                  </>
+                {/* Sign Up: Mobile (+91) */}
+                {mode === 'signup' && (
+                  <div>
+                    <label
+                      htmlFor="mobile"
+                      className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1.5"
+                    >
+                      Mobile Number <span className="text-orange-500">*</span>
+                    </label>
+                    <div className="relative flex items-center">
+                      <div className="absolute left-3 flex items-center gap-1 text-zinc-400 text-xs font-mono font-bold select-none pointer-events-none">
+                        <Phone className="w-3.5 h-3.5 text-zinc-500" />
+                        <span>+91</span>
+                      </div>
+                      <input
+                        id="mobile"
+                        name="mobile"
+                        type="tel"
+                        required
+                        inputMode="numeric"
+                        maxLength={10}
+                        autoComplete="tel-national"
+                        value={mobile}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 10)
+                          setMobile(val)
+                          clearFieldError('mobile')
+                        }}
+                        onBlur={() => handleBlur('mobile')}
+                        aria-invalid={Boolean(fieldErrors.mobile)}
+                        aria-describedby={fieldErrors.mobile ? 'mobile-error' : undefined}
+                        placeholder="98765 43210"
+                        className={`w-full bg-zinc-950 border ${
+                          fieldErrors.mobile
+                            ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
+                            : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
+                        } text-white text-xs rounded-xl pl-16 pr-3 py-2.5 placeholder-zinc-500 focus:outline-none focus:ring-1 font-mono transition-colors`}
+                      />
+                    </div>
+                    <div aria-live="polite">
+                      {fieldErrors.mobile && (
+                        <p id="mobile-error" className="mt-1 text-[11px] text-rose-400 break-words">
+                          {fieldErrors.mobile}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 )}
-              </button>
-            </form>
-          </div>
-        )}
 
-        {/* ================= STEP 5: PASSWORD LOGIN ================= */}
-        {step === 'password' && (
-          <div>
-            <button
-              type="button"
-              onClick={() => {
-                setErrorMessage('')
-                setStep('choice')
-              }}
-              className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white mb-4 transition-colors cursor-pointer"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to options</span>
-            </button>
+                {/* Password (Both Modes) */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label
+                      htmlFor="password"
+                      className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300"
+                    >
+                      Password <span className="text-orange-500">*</span>
+                    </label>
+                    {mode === 'login' ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStep('forgot_email')
+                          setErrorMessage('')
+                          setInfoMessage('')
+                        }}
+                        className="text-[11px] font-semibold text-orange-400 hover:text-orange-300 transition-colors cursor-pointer"
+                      >
+                        Forgot password?
+                      </button>
+                    ) : (
+                      <span className="text-[10px] text-zinc-500">Min 8 chars, 1 letter, 1 number</span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value)
+                        clearFieldError('password')
+                      }}
+                      onBlur={() => handleBlur('password')}
+                      aria-invalid={Boolean(fieldErrors.password)}
+                      aria-describedby={fieldErrors.password ? 'password-error' : undefined}
+                      placeholder="Enter your password"
+                      className={`w-full bg-zinc-950 border ${
+                        fieldErrors.password
+                          ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
+                          : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
+                      } text-white text-xs rounded-xl pl-9 pr-10 py-2.5 placeholder-zinc-500 focus:outline-none focus:ring-1 transition-colors`}
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 focus:outline-none cursor-pointer"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <div aria-live="polite">
+                    {fieldErrors.password && (
+                      <p id="password-error" className="mt-1 text-[11px] text-rose-400 break-words">
+                        {fieldErrors.password}
+                      </p>
+                    )}
+                  </div>
+                </div>
 
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Password Login
-            </h1>
-            <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
-              Sign in with your registered email and account password.
-            </p>
-
-            <form onSubmit={handlePasswordLogin} className="mt-6 space-y-4">
-              <div>
-                <label htmlFor="pwd-email" className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
-                  Email Address
-                </label>
-                <input
-                  id="pwd-email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  autoFocus
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="racer@airtouch.engineering"
-                  className="w-full bg-zinc-950 border border-zinc-800 focus:border-orange-500 text-sm text-white rounded-xl py-3 px-4 outline-none transition-colors placeholder-zinc-600 focus:ring-1 focus:ring-orange-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="pwd-val" className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
-                  Password
-                </label>
-                <input
-                  id="pwd-val"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-zinc-950 border border-zinc-800 focus:border-orange-500 text-sm text-white rounded-xl py-3 px-4 outline-none transition-colors placeholder-zinc-600 focus:ring-1 focus:ring-orange-500"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading || !email.trim() || !password}
-                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_24px_rgba(249,115,22,0.35)] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-black" />
-                    <span>Signing in...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Log In</span>
-                    <ArrowRight className="w-4 h-4 stroke-[2.5]" />
-                  </>
+                {/* Sign Up: Confirm Password */}
+                {mode === 'signup' && (
+                  <div>
+                    <label
+                      htmlFor="confirmPassword"
+                      className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1.5"
+                    >
+                      Confirm Password <span className="text-orange-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        required
+                        autoComplete="new-password"
+                        value={confirmPassword}
+                        onChange={(e) => {
+                          setConfirmPassword(e.target.value)
+                          clearFieldError('confirmPassword')
+                        }}
+                        onBlur={() => handleBlur('confirmPassword')}
+                        aria-invalid={Boolean(fieldErrors.confirmPassword)}
+                        aria-describedby={fieldErrors.confirmPassword ? 'confirmPassword-error' : undefined}
+                        placeholder="Re-enter your password"
+                        className={`w-full bg-zinc-950 border ${
+                          fieldErrors.confirmPassword
+                            ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
+                            : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
+                        } text-white text-xs rounded-xl pl-9 pr-10 py-2.5 placeholder-zinc-500 focus:outline-none focus:ring-1 transition-colors`}
+                      />
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 focus:outline-none cursor-pointer"
+                        aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <div aria-live="polite">
+                      {fieldErrors.confirmPassword && (
+                        <p id="confirmPassword-error" className="mt-1 text-[11px] text-rose-400 break-words">
+                          {fieldErrors.confirmPassword}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 )}
-              </button>
-            </form>
 
-            <div className="mt-5 text-center space-y-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setErrorMessage('')
-                  setStep('email')
-                }}
-                className="text-xs text-orange-400 hover:text-orange-300 underline font-semibold block w-full cursor-pointer"
-              >
-                Forgot password? Sign in with one-time code
-              </button>
+                {/* Sign Up Address Fields Section */}
+                {mode === 'signup' && (
+                  <div className="pt-3 border-t border-zinc-800/80 space-y-3.5">
+                    <div className="flex items-center gap-1.5 text-orange-500 text-xs font-bold uppercase tracking-wider">
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>Courier Delivery Address</span>
+                    </div>
+
+                    {/* Address Line 1 */}
+                    <div>
+                      <label
+                        htmlFor="addressLine1"
+                        className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1.5"
+                      >
+                        Address Line 1 <span className="text-orange-500">*</span>
+                      </label>
+                      <input
+                        id="addressLine1"
+                        name="addressLine1"
+                        type="text"
+                        required
+                        autoComplete="street-address"
+                        value={addressLine1}
+                        onChange={(e) => {
+                          setAddressLine1(e.target.value)
+                          clearFieldError('addressLine1')
+                        }}
+                        onBlur={() => handleBlur('addressLine1')}
+                        aria-invalid={Boolean(fieldErrors.addressLine1)}
+                        aria-describedby={fieldErrors.addressLine1 ? 'addressLine1-error' : undefined}
+                        placeholder="Flat/House No., Building, Street"
+                        className={`w-full bg-zinc-950 border ${
+                          fieldErrors.addressLine1
+                            ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
+                            : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
+                        } text-white text-xs rounded-xl px-3 py-2.5 placeholder-zinc-500 focus:outline-none focus:ring-1 transition-colors`}
+                      />
+                      <div aria-live="polite">
+                        {fieldErrors.addressLine1 && (
+                          <p id="addressLine1-error" className="mt-1 text-[11px] text-rose-400 break-words">
+                            {fieldErrors.addressLine1}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Landmark (Optional) */}
+                    <div>
+                      <label
+                        htmlFor="landmark"
+                        className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1.5"
+                      >
+                        Landmark <span className="text-zinc-500 font-normal lowercase">(optional)</span>
+                      </label>
+                      <div className="relative">
+                        <Building2 className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input
+                          id="landmark"
+                          name="landmark"
+                          type="text"
+                          value={landmark}
+                          onChange={(e) => {
+                            setLandmark(e.target.value)
+                            clearFieldError('landmark')
+                          }}
+                          onBlur={() => handleBlur('landmark')}
+                          aria-invalid={Boolean(fieldErrors.landmark)}
+                          aria-describedby={fieldErrors.landmark ? 'landmark-error' : undefined}
+                          placeholder="Near Metro / Landmark"
+                          className={`w-full bg-zinc-950 border ${
+                            fieldErrors.landmark
+                              ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
+                              : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
+                          } text-white text-xs rounded-xl pl-9 pr-3 py-2.5 placeholder-zinc-500 focus:outline-none focus:ring-1 transition-colors`}
+                        />
+                      </div>
+                      <div aria-live="polite">
+                        {fieldErrors.landmark && (
+                          <p id="landmark-error" className="mt-1 text-[11px] text-rose-400 break-words">
+                            {fieldErrors.landmark}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* State Dropdown */}
+                    <div>
+                      <label
+                        htmlFor="state"
+                        className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1.5"
+                      >
+                        State / UT <span className="text-orange-500">*</span>
+                      </label>
+                      <select
+                        id="state"
+                        name="state"
+                        required
+                        value={selectedState}
+                        onChange={handleStateChange}
+                        onBlur={() => handleBlur('state')}
+                        aria-invalid={Boolean(fieldErrors.state)}
+                        aria-describedby={fieldErrors.state ? 'state-error' : undefined}
+                        className={`w-full bg-zinc-950 border ${
+                          fieldErrors.state
+                            ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
+                            : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
+                        } text-white text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:ring-1 transition-colors cursor-pointer`}
+                      >
+                        <option value="" className="bg-zinc-900 text-zinc-400">
+                          -- Select State / UT --
+                        </option>
+                        {indiaStates.map((st) => (
+                          <option key={st.code} value={st.name} className="bg-zinc-900 text-white">
+                            {st.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div aria-live="polite">
+                        {fieldErrors.state && (
+                          <p id="state-error" className="mt-1 text-[11px] text-rose-400 break-words">
+                            {fieldErrors.state}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* District Dropdown (Depends on selectedState) */}
+                    <div>
+                      <label
+                        htmlFor="district"
+                        className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1.5"
+                      >
+                        District <span className="text-orange-500">*</span>
+                      </label>
+                      <select
+                        id="district"
+                        name="district"
+                        required
+                        disabled={!selectedState}
+                        value={selectedDistrict}
+                        onChange={(e) => {
+                          setSelectedDistrict(e.target.value)
+                          clearFieldError('district')
+                        }}
+                        onBlur={() => handleBlur('district')}
+                        aria-invalid={Boolean(fieldErrors.district)}
+                        aria-describedby={fieldErrors.district ? 'district-error' : undefined}
+                        className={`w-full bg-zinc-950 border ${
+                          fieldErrors.district
+                            ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
+                            : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
+                        } ${
+                          !selectedState ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                        } text-white text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:ring-1 transition-colors`}
+                      >
+                        <option value="" className="bg-zinc-900 text-zinc-400">
+                          {selectedState ? '-- Select District --' : '-- Select State First --'}
+                        </option>
+                        {districts.map((d) => (
+                          <option key={d} value={d} className="bg-zinc-900 text-white">
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+                      <div aria-live="polite">
+                        {fieldErrors.district && (
+                          <p id="district-error" className="mt-1 text-[11px] text-rose-400 break-words">
+                            {fieldErrors.district}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Pincode and Country */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label
+                          htmlFor="pincode"
+                          className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1.5"
+                        >
+                          Pincode <span className="text-orange-500">*</span>
+                        </label>
+                        <input
+                          id="pincode"
+                          name="pincode"
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={6}
+                          required
+                          value={pincode}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 6)
+                            setPincode(val)
+                            clearFieldError('pincode')
+                          }}
+                          onBlur={() => handleBlur('pincode')}
+                          aria-invalid={Boolean(fieldErrors.pincode)}
+                          aria-describedby={fieldErrors.pincode ? 'pincode-error' : undefined}
+                          placeholder="6-digit pin"
+                          className={`w-full bg-zinc-950 border ${
+                            fieldErrors.pincode
+                              ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
+                              : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
+                          } text-white text-xs rounded-xl px-3 py-2.5 placeholder-zinc-500 focus:outline-none focus:ring-1 font-mono transition-colors`}
+                        />
+                        <div aria-live="polite">
+                          {fieldErrors.pincode && (
+                            <p id="pincode-error" className="mt-1 text-[11px] text-rose-400 break-words">
+                              {fieldErrors.pincode}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="country"
+                          className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1.5"
+                        >
+                          Country
+                        </label>
+                        <input
+                          id="country"
+                          name="country"
+                          type="text"
+                          readOnly
+                          value="India"
+                          className="w-full bg-zinc-950/60 border border-zinc-800 text-zinc-400 text-xs rounded-xl px-3 py-2.5 cursor-not-allowed select-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Primary Submit Button */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full mt-2 py-3 px-4 rounded-xl bg-orange-500 hover:bg-orange-400 text-black font-black text-xs uppercase tracking-wider transition-all duration-200 shadow-[0_0_15px_rgba(249,115,22,0.3)] hover:shadow-[0_0_20px_rgba(249,115,22,0.45)] focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-black" />
+                      <span>{mode === 'login' ? 'Authenticating...' : 'Registering...'}</span>
+                    </>
+                  ) : (
+                    <span>{mode === 'login' ? 'Log In' : 'Create Account'}</span>
+                  )}
+                </button>
+              </form>
+
+              {/* Toggle footer hint */}
+              <div className="mt-6 pt-4 border-t border-zinc-850 text-center text-xs text-zinc-400">
+                {mode === 'login' ? (
+                  <p>
+                    Don&apos;t have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => handleModeSwitch('signup')}
+                      className="font-bold text-orange-400 hover:text-orange-300 transition-colors cursor-pointer"
+                    >
+                      Create one now
+                    </button>
+                  </p>
+                ) : (
+                  <p>
+                    Already have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => handleModeSwitch('login')}
+                      className="font-bold text-orange-400 hover:text-orange-300 transition-colors cursor-pointer"
+                    >
+                      Sign in here
+                    </button>
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ================= STEP 2: SIGN UP EMAIL VERIFICATION ================= */}
+          {step === 'signup_verify' && (
+            <div className="space-y-5">
+              <div className="text-center">
+                <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 mx-auto mb-3 shadow-[0_0_15px_rgba(249,115,22,0.15)]">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <h2 className="text-base font-bold text-white uppercase tracking-wider">
+                  Verify Your Email
+                </h2>
+                <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                  Enter the 6-digit code sent to{' '}
+                  <span className="text-white font-mono font-semibold">{maskEmail(otpEmail)}</span>
+                </p>
+              </div>
+
+              <form onSubmit={handleVerifySignupOtp} className="space-y-4">
+                <OtpInput
+                  value={otpDigits}
+                  onChange={setOtpDigits}
+                  disabled={isSubmitting}
+                  hasError={Boolean(errorMessage)}
+                />
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting || otpDigits.some((d) => !d)}
+                  className="w-full py-3 px-4 rounded-xl bg-orange-500 hover:bg-orange-400 text-black font-black text-xs uppercase tracking-wider transition-all duration-200 shadow-[0_0_15px_rgba(249,115,22,0.3)] hover:shadow-[0_0_20px_rgba(249,115,22,0.45)] focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-black" />
+                      <span>Verifying Code...</span>
+                    </>
+                  ) : (
+                    <span>Verify &amp; Continue</span>
+                  )}
+                </button>
+              </form>
+
+              <div className="flex flex-col items-center gap-2 pt-2 border-t border-zinc-800/80 text-xs text-zinc-400">
+                <button
+                  type="button"
+                  disabled={resendCooldown > 0 || isSubmitting}
+                  onClick={handleResendSignupCode}
+                  className={`font-semibold transition-colors ${
+                    resendCooldown > 0
+                      ? 'text-zinc-600 cursor-not-allowed'
+                      : 'text-orange-400 hover:text-orange-300 cursor-pointer'
+                  }`}
+                >
+                  {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep('auth')
+                    setErrorMessage('')
+                    setInfoMessage('')
+                  }}
+                  className="text-zinc-400 hover:text-white transition-colors cursor-pointer mt-1"
+                >
+                  Change email address
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Security Footer Note */}
-        <div className="mt-8 pt-5 border-t border-zinc-800/80 flex items-center justify-center gap-2 text-[11px] text-zinc-500">
-          <ShieldCheck className="w-3.5 h-3.5 text-orange-500/70" />
-          <span>Encrypted with 256-bit SSL & Supabase Security</span>
+          {/* ================= STEP 3: FORGOT PASSWORD - EMAIL INPUT ================= */}
+          {step === 'forgot_email' && (
+            <div className="space-y-5">
+              <div className="text-center">
+                <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 mx-auto mb-3 shadow-[0_0_15px_rgba(249,115,22,0.15)]">
+                  <KeyRound className="w-6 h-6" />
+                </div>
+                <h2 className="text-base font-bold text-white uppercase tracking-wider">
+                  Forgot Password
+                </h2>
+                <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                  Enter your registered email address to receive a secure password reset code.
+                </p>
+              </div>
+
+              <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="forgotEmail"
+                    className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1.5"
+                  >
+                    Email Address <span className="text-orange-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      id="forgotEmail"
+                      name="forgotEmail"
+                      type="email"
+                      required
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      className="w-full bg-zinc-950 border border-zinc-800 focus:border-orange-500 focus:ring-orange-500 text-white text-xs rounded-xl pl-9 pr-3 py-2.5 placeholder-zinc-500 focus:outline-none focus:ring-1 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !email.trim()}
+                  className="w-full py-3 px-4 rounded-xl bg-orange-500 hover:bg-orange-400 text-black font-black text-xs uppercase tracking-wider transition-all duration-200 shadow-[0_0_15px_rgba(249,115,22,0.3)] hover:shadow-[0_0_20px_rgba(249,115,22,0.45)] focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-black" />
+                      <span>Sending Code...</span>
+                    </>
+                  ) : (
+                    <span>Send Reset Code</span>
+                  )}
+                </button>
+              </form>
+
+              <div className="pt-2 border-t border-zinc-800/80 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep('auth')
+                    setMode('login')
+                    setErrorMessage('')
+                    setInfoMessage('')
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Log In</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ================= STEP 4: FORGOT PASSWORD - CODE VERIFICATION ================= */}
+          {step === 'forgot_verify' && (
+            <div className="space-y-5">
+              <div className="text-center">
+                <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 mx-auto mb-3 shadow-[0_0_15px_rgba(249,115,22,0.15)]">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <h2 className="text-base font-bold text-white uppercase tracking-wider">
+                  Enter Reset Code
+                </h2>
+                <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                  Enter the 6-digit code sent to{' '}
+                  <span className="text-white font-mono font-semibold">{maskEmail(otpEmail)}</span>
+                </p>
+              </div>
+
+              <form onSubmit={handleVerifyResetOtp} className="space-y-4">
+                <OtpInput
+                  value={otpDigits}
+                  onChange={setOtpDigits}
+                  disabled={isSubmitting}
+                  hasError={Boolean(errorMessage)}
+                />
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting || otpDigits.some((d) => !d)}
+                  className="w-full py-3 px-4 rounded-xl bg-orange-500 hover:bg-orange-400 text-black font-black text-xs uppercase tracking-wider transition-all duration-200 shadow-[0_0_15px_rgba(249,115,22,0.3)] hover:shadow-[0_0_20px_rgba(249,115,22,0.45)] focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-black" />
+                      <span>Verifying Code...</span>
+                    </>
+                  ) : (
+                    <span>Verify Code</span>
+                  )}
+                </button>
+              </form>
+
+              <div className="flex flex-col items-center gap-2 pt-2 border-t border-zinc-800/80 text-xs text-zinc-400">
+                <button
+                  type="button"
+                  disabled={resendCooldown > 0 || isSubmitting}
+                  onClick={handleResendResetCode}
+                  className={`font-semibold transition-colors ${
+                    resendCooldown > 0
+                      ? 'text-zinc-600 cursor-not-allowed'
+                      : 'text-orange-400 hover:text-orange-300 cursor-pointer'
+                  }`}
+                >
+                  {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep('forgot_email')
+                    setErrorMessage('')
+                    setInfoMessage('')
+                  }}
+                  className="text-zinc-400 hover:text-white transition-colors cursor-pointer mt-1"
+                >
+                  Change email address
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ================= STEP 5: FORGOT PASSWORD - NEW PASSWORD ================= */}
+          {step === 'forgot_reset' && (
+            <div className="space-y-5">
+              <div className="text-center">
+                <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 mx-auto mb-3 shadow-[0_0_15px_rgba(249,115,22,0.15)]">
+                  <KeyRound className="w-6 h-6" />
+                </div>
+                <h2 className="text-base font-bold text-white uppercase tracking-wider">
+                  Set New Password
+                </h2>
+                <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                  Choose a new, strong password to secure your AirTouch account.
+                </p>
+              </div>
+
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+                {/* New Password */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label
+                      htmlFor="newPassword"
+                      className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300"
+                    >
+                      New Password <span className="text-orange-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-zinc-500">Min 8 chars, 1 letter, 1 number</span>
+                  </div>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      id="newPassword"
+                      name="newPassword"
+                      type={showNewPassword ? 'text' : 'password'}
+                      required
+                      autoComplete="new-password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      className="w-full bg-zinc-950 border border-zinc-800 focus:border-orange-500 focus:ring-orange-500 text-white text-xs rounded-xl pl-9 pr-10 py-2.5 placeholder-zinc-500 focus:outline-none focus:ring-1 transition-colors"
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setShowNewPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 focus:outline-none cursor-pointer"
+                      aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm New Password */}
+                <div>
+                  <label
+                    htmlFor="confirmNewPassword"
+                    className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1.5"
+                  >
+                    Confirm New Password <span className="text-orange-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      id="confirmNewPassword"
+                      name="confirmNewPassword"
+                      type={showConfirmNewPassword ? 'text' : 'password'}
+                      required
+                      autoComplete="new-password"
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      placeholder="Re-enter new password"
+                      className="w-full bg-zinc-950 border border-zinc-800 focus:border-orange-500 focus:ring-orange-500 text-white text-xs rounded-xl pl-9 pr-10 py-2.5 placeholder-zinc-500 focus:outline-none focus:ring-1 transition-colors"
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setShowConfirmNewPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 focus:outline-none cursor-pointer"
+                      aria-label={showConfirmNewPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showConfirmNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !newPassword || !confirmNewPassword}
+                  className="w-full py-3 px-4 rounded-xl bg-orange-500 hover:bg-orange-400 text-black font-black text-xs uppercase tracking-wider transition-all duration-200 shadow-[0_0_15px_rgba(249,115,22,0.3)] hover:shadow-[0_0_20px_rgba(249,115,22,0.45)] focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-black" />
+                      <span>Updating Password...</span>
+                    </>
+                  ) : (
+                    <span>Reset &amp; Log In</span>
+                  )}
+                </button>
+              </form>
+            </div>
+          )}
         </div>
+
+        {/* Security & Support Footnote */}
+        <p className="text-[11px] text-zinc-500 text-center mt-6">
+          Encrypted credentials with secure bcrypt hashing &amp; Bearer token storage.
+        </p>
+
+        {/* Admin Portal Link */}
+        <p className="text-[11px] text-zinc-500 text-center mt-2">
+          Are you an admin?{' '}
+          <Link
+            to="/admin/login"
+            className="text-zinc-400 hover:text-orange-400 transition-colors font-medium underline underline-offset-2"
+          >
+            Log in here
+          </Link>
+        </p>
       </div>
     </main>
   )

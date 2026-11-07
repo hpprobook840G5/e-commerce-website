@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { ChevronRight, Home, X, RotateCcw, Sparkles } from 'lucide-react'
 import { PRODUCTS, CATEGORIES, BRANDS } from '../../data/products.js'
+import { fetchStorefrontProducts } from '../../services/productsApi.js'
 import CategoryChips from '../../components/products/CategoryChips.jsx'
 import SortBar from '../../components/products/SortBar.jsx'
 import FilterSidebar from '../../components/products/FilterSidebar.jsx'
@@ -19,6 +20,8 @@ export default function Products() {
   const urlSearch = searchParams.get('search') || ''
 
   // 2. Filter & Sort States
+  const [productsList, setProductsList] = useState(PRODUCTS)
+  const [isCachedNote, setIsCachedNote] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState(urlCategory)
   const [searchQuery, setSearchQuery] = useState(urlSearch)
   const [sortBy, setSortBy] = useState('featured')
@@ -35,6 +38,20 @@ export default function Products() {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false)
   const [quickViewProduct, setQuickViewProduct] = useState(null)
   const [isSimulatedLoading, setIsSimulatedLoading] = useState(false)
+
+  // Fetch products from API on mount
+  useEffect(() => {
+    let isMounted = true
+    fetchStorefrontProducts().then((res) => {
+      if (isMounted && res.products && res.products.length > 0) {
+        setProductsList(res.products)
+        setIsCachedNote(res.isCached)
+      }
+    })
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   // Sync state if URL changes (e.g. from 3D model hotspot navigation or Navbar search)
   useEffect(() => {
@@ -105,10 +122,10 @@ export default function Products() {
 
   // Calculate active category counts
   const categoryCounts = useMemo(() => {
-    const counts = { all: PRODUCTS.length }
+    const counts = { all: productsList.length }
     CATEGORIES.forEach((cat) => {
       if (cat.id === 'all') return
-      counts[cat.id] = PRODUCTS.filter((p) => {
+      counts[cat.id] = productsList.filter((p) => {
         if (p.category === cat.id) return true
         if (cat.aliases && cat.aliases.some((alias) => p.category.includes(alias))) {
           return true
@@ -117,7 +134,7 @@ export default function Products() {
       }).length
     })
     return counts
-  }, [])
+  }, [productsList])
 
   // Calculate active filter count for the badge
   const activeFilterCount = useMemo(() => {
@@ -142,7 +159,7 @@ export default function Products() {
 
   // Filter & Sort Pipeline
   const filteredProducts = useMemo(() => {
-    return PRODUCTS.filter((product) => {
+    return productsList.filter((product) => {
       // 1. Category Matching (including alias mapping for 3D model links)
       if (selectedCategory !== 'all') {
         const catObj = CATEGORIES.find(
@@ -222,6 +239,7 @@ export default function Products() {
     inStockOnly,
     selectedBikeTypes,
     sortBy,
+    productsList,
   ])
 
   // Pagination calculations
@@ -284,9 +302,16 @@ export default function Products() {
           {/* Title & Subtitle */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/25 text-orange-400 text-[11px] font-extrabold uppercase tracking-wider mb-2">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Professional Engineering Catalog</span>
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/25 text-orange-400 text-[11px] font-extrabold uppercase tracking-wider">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Professional Engineering Catalog</span>
+                </div>
+                {import.meta.env.DEV && isCachedNote && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded text-[11px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/25">
+                    Showing cached catalogue
+                  </span>
+                )}
               </div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tight text-white">
                 {selectedCategory === 'all'

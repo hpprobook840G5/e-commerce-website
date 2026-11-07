@@ -1,9 +1,9 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext.jsx'
+import { useCustomerAuth } from '../context/CustomerAuthContext.jsx'
 import { Gauge } from 'lucide-react'
 
 export default function ProtectedRoute() {
-  const { user, loading } = useAuth()
+  const { user, loading } = useCustomerAuth()
   const location = useLocation()
 
   if (loading) {
@@ -19,6 +19,7 @@ export default function ProtectedRoute() {
     )
   }
 
+  // If no customer is logged in, redirect to auth page
   if (!user) {
     const nextPath = location.pathname + location.search
     return (
