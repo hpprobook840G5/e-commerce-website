@@ -181,6 +181,18 @@ export async function fetchAdminOrderCounts() {
   return res.json()
 }
 
+export async function downloadAdminOrderInvoice(id) {
+  const res = await fetch(`${API_BASE_URL}/admin/orders/${id}/invoice.pdf`, {
+    method: 'GET',
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to download invoice')
+  }
+  return await res.blob()
+}
+
 // ========================
 // CONTACT MESSAGES
 // ========================

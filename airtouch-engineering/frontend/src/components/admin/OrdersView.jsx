@@ -19,10 +19,12 @@ import {
   Banknote,
   MessageSquare,
   AlertTriangle,
+  FileText,
 } from 'lucide-react'
 import {
   fetchAdminOrders,
   updateAdminOrderStatus,
+  downloadAdminOrderInvoice,
 } from '../../services/adminApi.js'
 
 export default function OrdersView() {
@@ -44,6 +46,8 @@ export default function OrdersView() {
   // Inline Confirmation Modal for Reverting Completed to Pending
   const [revertConfirmTarget, setRevertConfirmTarget] = useState(null)
   const [statusUpdatingId, setStatusUpdatingId] = useState(null)
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState(null)
+  const [invoiceError, setInvoiceError] = useState(null)
 
   const loadOrders = useCallback(async (targetPage = page) => {
     setLoading(true)
@@ -126,6 +130,29 @@ export default function OrdersView() {
     } finally {
       setStatusUpdatingId(null)
       setRevertConfirmTarget(null)
+    }
+  }
+
+  const handleDownloadInvoice = async (order, e) => {
+    if (e) e.stopPropagation()
+    if (!order?.id) return
+    setDownloadingInvoiceId(order.id)
+    setInvoiceError(null)
+    try {
+      const blob = await downloadAdminOrderInvoice(order.id)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${order.orderNumber || 'order'}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Invoice download failed:', err)
+      setInvoiceError(`Failed to download invoice for ${order.orderNumber}: ${err.message || 'Unknown error'}`)
+    } finally {
+      setDownloadingInvoiceId(null)
     }
   }
 
@@ -236,6 +263,22 @@ export default function OrdersView() {
         </div>
       )}
 
+      {invoiceError && (
+        <div className="p-4 rounded-xl bg-red-950/40 border border-red-800 text-red-300 text-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
+            <span>{invoiceError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setInvoiceError(null)}
+            className="text-zinc-400 hover:text-white font-semibold cursor-pointer shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Main Content */}
       {loading ? (
         <div className="py-20 flex flex-col items-center justify-center text-zinc-400">
@@ -263,6 +306,7 @@ export default function OrdersView() {
                   <th className="py-3 px-4 text-center">Items</th>
                   <th className="py-3 px-4 text-right">Total</th>
                   <th className="py-3 px-4">UPI Ref</th>
+                  <th className="py-3 px-4 text-center">Invoice</th>
                   <th className="py-3 px-4 text-center">Status Action</th>
                 </tr>
               </thead>
@@ -271,6 +315,7 @@ export default function OrdersView() {
                   const isDemo = String(o.orderNumber || '').startsWith('DEMO-')
                   const isPending = o.status === 'pending'
                   const isUpdating = statusUpdatingId === o.id
+                  const isDownloadingInvoice = downloadingInvoiceId === o.id
 
                   return (
                     <tr
@@ -324,6 +369,26 @@ export default function OrdersView() {
                         ) : (
                           '—'
                         )}
+                      </td>
+
+                      <td
+                        className="py-3.5 px-4 text-center whitespace-nowrap"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => handleDownloadInvoice(o, e)}
+                          disabled={isDownloadingInvoice}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold border border-zinc-700 bg-zinc-800/80 hover:bg-zinc-750 text-zinc-200 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+                          title="Download invoice PDF"
+                        >
+                          {isDownloadingInvoice ? (
+                            <Loader2 className="w-3 h-3 animate-spin text-orange-400" />
+                          ) : (
+                            <FileText className="w-3 h-3 text-orange-400" />
+                          )}
+                          <span>{o.status === 'completed' ? 'Download invoice' : 'Download invoice (pending)'}</span>
+                        </button>
                       </td>
 
                       <td
@@ -404,7 +469,7 @@ export default function OrdersView() {
                   )}
 
                   <div
-                    className="pt-2 border-t border-zinc-850 flex items-center justify-between"
+                    className="pt-2 border-t border-zinc-850 flex flex-wrap items-center justify-between gap-2"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div>
@@ -416,22 +481,39 @@ export default function OrdersView() {
                       </span>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleToggleStatus(o)}
-                      disabled={isUpdating}
-                      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        isPending
-                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                          : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                      }`}
-                    >
-                      {isUpdating ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <span>{o.status}</span>
-                      )}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => handleDownloadInvoice(o, e)}
+                        disabled={downloadingInvoiceId === o.id}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold border border-zinc-700 bg-zinc-800 text-zinc-200 hover:text-white cursor-pointer disabled:opacity-50"
+                        title="Download invoice PDF"
+                      >
+                        {downloadingInvoiceId === o.id ? (
+                          <Loader2 className="w-3 h-3 animate-spin text-orange-400" />
+                        ) : (
+                          <FileText className="w-3 h-3 text-orange-400" />
+                        )}
+                        <span>{o.status === 'completed' ? 'Download invoice' : 'Download invoice (pending)'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleStatus(o)}
+                        disabled={isUpdating}
+                        className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          isPending
+                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                        }`}
+                      >
+                        {isUpdating ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <span>{o.status}</span>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )
@@ -716,9 +798,26 @@ export default function OrdersView() {
               </div>
             </div>
 
-            {/* Drawer Footer Status Toggle */}
-            <div className="pt-4 border-t border-zinc-800 flex items-center justify-between">
-              <span className="text-xs text-zinc-400">Status: {selectedOrder.status}</span>
+            {/* Drawer Footer Status Toggle & Invoice */}
+            <div className="pt-4 border-t border-zinc-800 flex flex-wrap items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => handleDownloadInvoice(selectedOrder)}
+                disabled={downloadingInvoiceId === selectedOrder.id}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {downloadingInvoiceId === selectedOrder.id ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-400" />
+                ) : (
+                  <FileText className="w-3.5 h-3.5 text-orange-400" />
+                )}
+                <span>
+                  {selectedOrder.status === 'completed'
+                    ? 'Download invoice'
+                    : 'Download invoice (pending)'}
+                </span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => handleToggleStatus(selectedOrder)}

@@ -1,4 +1,6 @@
 import salesAnalyticsService from '../services/salesAnalytics.service.js'
+import orderService from '../services/order.service.js'
+import invoiceService from '../services/invoice.service.js'
 
 export const adminAnalyticsController = {
   async getSummary(req, res) {
@@ -82,6 +84,28 @@ export const adminAnalyticsController = {
     } catch (err) {
       console.error('[AdminAnalyticsController] getOrderCounts error:', err)
       return res.status(500).json({ error: 'Server Error', message: 'Failed to fetch order counts' })
+    }
+  },
+
+  async downloadOrderInvoice(req, res) {
+    const { id } = req.params
+
+    try {
+      const order = await orderService.getOrderByIdForAdmin(id)
+      if (!order) {
+        return res.status(404).json({ error: 'Not Found', message: 'Order not found' })
+      }
+
+      const pdfBuffer = await invoiceService.generateInvoicePdf(order)
+
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}.pdf"`)
+      res.setHeader('Content-Length', pdfBuffer.length)
+
+      return res.send(pdfBuffer)
+    } catch (err) {
+      console.error('[AdminAnalyticsController.downloadOrderInvoice Error]:', err.message)
+      return res.status(500).json({ error: 'Server Error', message: 'Failed to generate invoice' })
     }
   },
 }

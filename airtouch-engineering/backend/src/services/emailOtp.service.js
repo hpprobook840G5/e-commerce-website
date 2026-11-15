@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import env from '../config/env.js'
 import { supabaseAdmin } from '../config/supabase.js'
-import { sendMail } from '../config/mailer.js'
+import { sendTrackedMail } from '../config/mailer.js'
 
 // In-memory fallback for local development or testing before migrations are run
 const memoryOtps = []
@@ -62,11 +62,12 @@ export class EmailOtpService {
     }
 
     // If SMTP or OTP_HMAC_SECRET is missing, return 503 and log only variable names
-    if (!env.OTP_HMAC_SECRET || !env.SMTP_HOST || !env.SMTP_USER || !env.SMTP_PASS) {
+    if (!env.OTP_HMAC_SECRET || !env.SMTP_HOST || !env.SMTP_USER || !env.SMTP_PASS || !env.SMTP_FROM) {
       const missing = []
       if (!env.SMTP_HOST) missing.push('SMTP_HOST')
       if (!env.SMTP_USER) missing.push('SMTP_USER')
       if (!env.SMTP_PASS) missing.push('SMTP_PASS')
+      if (!env.SMTP_FROM) missing.push('SMTP_FROM')
       if (!env.OTP_HMAC_SECRET) missing.push('OTP_HMAC_SECRET')
       console.warn(`[Email Service Warning]: Missing configuration variables: ${missing.join(', ')}`)
 
@@ -121,10 +122,17 @@ export class EmailOtpService {
           .from('email_otps')
           .insert(newOtpRecord)
         if (insertErr) {
-          console.warn('[EmailOtpService Insert DB Warning]:', insertErr.message)
+          console.error(`[EmailOtpService DB Error]: Code ${insertErr.code || 'INSERT_FAILED'}`)
+          const err = new Error('Could not initialize verification code.')
+          err.status = 500
+          throw err
         }
       } catch (insertEx) {
-        console.warn('[EmailOtpService Insert DB Exception]:', insertEx.message)
+        if (insertEx.status === 500) throw insertEx
+        console.error(`[EmailOtpService DB Exception]: Code ${insertEx.code || 'DB_EXCEPTION'}`)
+        const err = new Error('Could not initialize verification code.')
+        err.status = 500
+        throw err
       }
     }
 
@@ -208,11 +216,12 @@ If you did not request this, you can safely ignore this email.
 
     // 4. Send email and await delivery; catch delivery errors without logging secrets
     try {
-      await sendMail({
+      await sendTrackedMail({
         to: normalizedEmail,
         subject,
         text: textBody,
         html: htmlBody,
+        purpose,
       })
       return true
     } catch (mailErr) {

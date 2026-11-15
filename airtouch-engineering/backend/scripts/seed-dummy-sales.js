@@ -73,14 +73,7 @@ async function run() {
   ]
 
   const dummyEmails = [
-    'arjun.sharma@example.com',
-    'rohit.verma@example.com',
-    'vikram.singh@example.com',
-    'priya.nair@example.com',
-    'rahul.mehta@example.com',
-    'aditya.patel@example.com',
-    'sneha.kulkarni@example.com',
-    'karan.deshmukh@example.com',
+    'airtouchengineering2006@gmail.com',
   ]
 
   const ordersToInsert = []

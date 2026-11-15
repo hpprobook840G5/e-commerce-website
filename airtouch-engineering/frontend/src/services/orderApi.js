@@ -91,6 +91,45 @@ export async function createCustomerOrder(payload) {
 }
 
 /**
+ * Retrieves orders for the logged-in customer.
+ *
+ * @param {object} [options]
+ * @param {number} [options.page=1]
+ * @param {number} [options.limit=20]
+ * @returns {Promise<{ orders: Array<object>, total: number, page: number, limit: number, totalPages: number }>}
+ */
+export async function fetchCustomerOrders({ page = 1, limit = 20 } = {}) {
+  const token = customerSession.getToken()
+  const params = new URLSearchParams()
+  if (page) params.set('page', page)
+  if (limit) params.set('limit', limit)
+
+  const res = await fetch(`${API_BASE_URL}/orders?${params.toString()}`, {
+    method: 'GET',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  })
+
+  const data = await res.json().catch(() => ({}))
+
+  if (!res.ok) {
+    const error = new Error(data.message || 'Failed to retrieve orders.')
+    error.status = res.status
+    throw error
+  }
+
+  const rawOrders = Array.isArray(data) ? data : data.orders || []
+  return {
+    orders: rawOrders.map(mapOrderResponse),
+    total: data.total !== undefined ? data.total : rawOrders.length,
+    page: data.page || page,
+    limit: data.limit || limit,
+    totalPages: data.totalPages || 1,
+  }
+}
+
+/**
  * Retrieves a customer order by order number.
  *
  * @param {string} orderNumber
@@ -114,6 +153,31 @@ export async function fetchCustomerOrderByNumber(orderNumber) {
   }
 
   return mapOrderResponse(data)
+}
+
+/**
+ * Downloads invoice PDF as a Blob.
+ *
+ * @param {string} orderNumber
+ * @returns {Promise<Blob>}
+ */
+export async function downloadOrderInvoice(orderNumber) {
+  const token = customerSession.getToken()
+  const res = await fetch(`${API_BASE_URL}/orders/${encodeURIComponent(orderNumber)}/invoice.pdf`, {
+    method: 'GET',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    const error = new Error(errorData.message || 'Failed to download invoice.')
+    error.status = res.status
+    throw error
+  }
+
+  return await res.blob()
 }
 
 /**
@@ -150,6 +214,8 @@ export async function submitCustomerUpiReference(orderNumber, reference) {
 
 export default {
   createCustomerOrder,
+  fetchCustomerOrders,
   fetchCustomerOrderByNumber,
+  downloadOrderInvoice,
   submitCustomerUpiReference,
 }

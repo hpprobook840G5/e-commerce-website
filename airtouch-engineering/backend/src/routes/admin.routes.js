@@ -203,6 +203,7 @@ router.get('/analytics/categories', requireAdmin, adminAnalyticsController.getCa
 router.get('/analytics/trend', requireAdmin, adminAnalyticsController.getRevenueTrend)
 router.get('/orders', requireAdmin, adminAnalyticsController.getOrders)
 router.get('/orders/counts', requireAdmin, adminAnalyticsController.getOrderCounts)
+router.get('/orders/:id/invoice.pdf', requireAdmin, adminAnalyticsController.downloadOrderInvoice)
 router.patch('/orders/:id/status', requireAdmin, adminAnalyticsController.updateOrderStatus)
 
 // ==========================================

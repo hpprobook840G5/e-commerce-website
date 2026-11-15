@@ -87,6 +87,7 @@ export function checkEmailConfig() {
   if (!cleanEnv(process.env.SMTP_HOST)) missing.push('SMTP_HOST')
   if (!cleanEnv(process.env.SMTP_USER)) missing.push('SMTP_USER')
   if (!cleanEnv(process.env.SMTP_PASS)) missing.push('SMTP_PASS')
+  if (!cleanEnv(process.env.SMTP_FROM)) missing.push('SMTP_FROM')
   if (!cleanEnv(process.env.OTP_HMAC_SECRET)) missing.push('OTP_HMAC_SECRET')
 
   if (missing.length > 0) {
@@ -140,7 +141,7 @@ export default {
   SMTP_SECURE: cleanEnv(process.env.SMTP_SECURE) === 'true',
   SMTP_USER: cleanEnv(process.env.SMTP_USER),
   SMTP_PASS: cleanEnv(process.env.SMTP_PASS),
-  SMTP_FROM: cleanEnv(process.env.SMTP_FROM) || 'AirTouch Engineering <no-reply@example.com>',
+  SMTP_FROM: cleanEnv(process.env.SMTP_FROM),
   // OTP HMAC and Timing
   OTP_HMAC_SECRET: cleanEnv(process.env.OTP_HMAC_SECRET),
   OTP_TTL_MINUTES: parseInt(cleanEnv(process.env.OTP_TTL_MINUTES) || '10', 10),
@@ -158,6 +159,10 @@ export default {
   UPI_VPA,
   UPI_PAYEE_NAME,
   ADMIN_NOTIFY_EMAIL,
+  // Invoice Configuration
+  INVOICE_BUSINESS_NAME: cleanEnv(process.env.INVOICE_BUSINESS_NAME),
+  INVOICE_BUSINESS_ADDRESS: cleanEnv(process.env.INVOICE_BUSINESS_ADDRESS),
+  INVOICE_GSTIN: cleanEnv(process.env.INVOICE_GSTIN),
   isUpiConfigured,
   isProduction,
   isAuthConfigured,

@@ -366,6 +366,80 @@ export const orderService = {
   },
 
   /**
+   * List orders for a specific authenticated customer with pagination.
+   */
+  async listOrdersForCustomer({ customerId, customerEmail, page = 1, limit = 20 }) {
+    const pageNum = Math.max(1, parseInt(page, 10) || 1)
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10) || 20))
+    const offset = (pageNum - 1) * limitNum
+
+    let dbOrders = []
+    let total = 0
+    let querySuccess = false
+
+    if (isAuthConfigured && supabaseAdmin && customerId) {
+      try {
+        let query = supabaseAdmin
+          .from('orders')
+          .select('*, order_items(*)', { count: 'exact' })
+
+        // Support matching legacy orders with null customer_id by customer_email
+        if (customerEmail) {
+          query = query.or(
+            `customer_id.eq.${customerId},and(customer_id.is.null,customer_email.eq.${customerEmail.toLowerCase()})`
+          )
+        } else {
+          query = query.eq('customer_id', customerId)
+        }
+
+        const { data, count, error } = await query
+          .order('created_at', { ascending: false })
+          .range(offset, offset + limitNum - 1)
+
+        if (!error && data) {
+          dbOrders = data
+          total = count || 0
+          querySuccess = true
+        }
+      } catch (err) {
+        console.warn('[OrderService] Supabase listOrdersForCustomer failed, falling back to memory:', err.message)
+      }
+    }
+
+    if (!querySuccess) {
+      // Memory store fallback
+      const allMemOrders = salesAnalyticsService.getMemoryOrders()
+      const matchingMem = allMemOrders.filter((o) => {
+        if (o.customer_id === customerId) return true
+        if (!o.customer_id && customerEmail && o.customer_email?.toLowerCase() === customerEmail.toLowerCase()) return true
+        return false
+      })
+
+      matchingMem.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      total = matchingMem.length
+      const pagedMem = matchingMem.slice(offset, offset + limitNum)
+
+      const memItems = salesAnalyticsService.getMemoryOrderItems()
+      dbOrders = pagedMem.map((o) => ({
+        ...o,
+        order_items: memItems.filter((i) => i.order_id === o.id),
+      }))
+    }
+
+    const formattedOrders = dbOrders.map((orderRow) =>
+      this.formatOrderResponse(orderRow, orderRow.order_items || [])
+    )
+
+    return {
+      orders: formattedOrders,
+      total,
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum) || 1,
+    }
+  },
+
+  /**
    * Find an order by order number for a specific authenticated customer.
    */
   async getOrderByNumberForCustomer(orderNumber, customerId) {
@@ -408,6 +482,52 @@ export const orderService = {
     if (order.customer_id && customerId && order.customer_id !== customerId) {
       return null
     }
+
+    return this.formatOrderResponse(order, items)
+  },
+
+  /**
+   * Find an order by ID or order number for Admin (no ownership restriction).
+   */
+  async getOrderByIdForAdmin(orderIdOrNumber) {
+    let order = null
+    let items = []
+
+    if (isAuthConfigured && supabaseAdmin) {
+      try {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderIdOrNumber)
+        let query = supabaseAdmin.from('orders').select('*')
+        if (isUuid) {
+          query = query.eq('id', orderIdOrNumber)
+        } else {
+          query = query.eq('order_number', orderIdOrNumber)
+        }
+
+        const { data: dbOrder, error } = await query.maybeSingle()
+        if (!error && dbOrder) {
+          order = dbOrder
+          const { data: dbItems } = await supabaseAdmin
+            .from('order_items')
+            .select('*')
+            .eq('order_id', dbOrder.id)
+          items = dbItems || []
+        }
+      } catch (err) {
+        // fallback to memory
+      }
+    }
+
+    if (!order) {
+      const allMem = salesAnalyticsService.getMemoryOrders()
+      order = allMem.find((o) => o.id === orderIdOrNumber || o.order_number === orderIdOrNumber)
+      if (order) {
+        items = salesAnalyticsService
+          .getMemoryOrderItems()
+          .filter((i) => i.order_id === order.id)
+      }
+    }
+
+    if (!order) return null
 
     return this.formatOrderResponse(order, items)
   },

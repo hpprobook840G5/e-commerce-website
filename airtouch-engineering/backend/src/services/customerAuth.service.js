@@ -490,9 +490,12 @@ export class CustomerAuthService {
     if (user) {
       try {
         await EmailOtpService.generateOtp(normalizedEmail, 'password_reset')
+        console.log('[ForgotPassword] reset OTP sent')
       } catch (otpErr) {
         console.error('[CustomerAuthService ForgotPassword Delivery Error]:', otpErr.message)
       }
+    } else {
+      console.log('[ForgotPassword] no matching account, no email sent.')
     }
 
     return {

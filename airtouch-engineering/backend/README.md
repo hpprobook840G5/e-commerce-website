@@ -14,7 +14,7 @@ SUPABASE_URL=your-supabase-project-url
 SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 
 # Admin Authentication (Never expose to frontend VITE_ variables)
-ADMIN_EMAIL=admin@airtouch.test
+ADMIN_EMAIL=airtouchengineering2006@gmail.com
 ADMIN_PASSWORD_HASH='<bcrypt_hash_generated_below>'
 ADMIN_JWT_SECRET=your-secure-admin-jwt-secret-min-32-chars
 ADMIN_SESSION_HOURS=8
@@ -37,6 +37,19 @@ ADMIN_PASSWORD_HASH='$2b$12$...'
 Copy the generated hash and paste it into `backend/.env` wrapped in single quotes:
 ```env
 ADMIN_PASSWORD_HASH='$2b$12$...'
+```
+
+## SMTP Email Delivery Test Script
+
+To test SMTP connection and message delivery using the configured settings in `.env`:
+
+```bash
+node scripts/send-test-email.js you@example.com
+```
+
+In production environments, `--confirm` is required to execute:
+```bash
+node scripts/send-test-email.js you@example.com --confirm
 ```
 
 ## Admin API Endpoints

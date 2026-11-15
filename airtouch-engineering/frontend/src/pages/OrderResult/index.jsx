@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Loader2,
   Check,
+  FileText,
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { CONTACT_INFO } from '../../config/contactInfo.js'
@@ -20,6 +21,7 @@ import { formatINR } from '../../components/checkout/priceSummary.js'
 import {
   fetchCustomerOrderByNumber,
   submitCustomerUpiReference,
+  downloadOrderInvoice,
 } from '../../services/orderApi.js'
 import { useCustomerAuth } from '../../context/CustomerAuthContext.jsx'
 
@@ -38,6 +40,32 @@ export default function OrderResult() {
   const [submittingRef, setSubmittingRef] = useState(false)
   const [refSuccess, setRefSuccess] = useState(false)
   const [refError, setRefError] = useState(null)
+
+  // Invoice download state
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false)
+  const [invoiceError, setInvoiceError] = useState(null)
+
+  const handleDownloadInvoice = async () => {
+    if (!orderNumber || downloadingInvoice) return
+    setDownloadingInvoice(true)
+    setInvoiceError(null)
+    try {
+      const blob = await downloadOrderInvoice(orderNumber)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${orderNumber}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('[OrderResult] Invoice download error:', err)
+      setInvoiceError(err.message || 'Unable to download invoice. Please try again.')
+    } finally {
+      setDownloadingInvoice(false)
+    }
+  }
 
   // Handle browser back button: navigate to /products instead of /cart or /checkout
   useEffect(() => {
@@ -323,6 +351,37 @@ export default function OrderResult() {
                 {formatINR(grandTotal)}
               </span>
             </p>
+
+            <div className="pt-3 flex flex-col items-center gap-2">
+              <button
+                type="button"
+                onClick={handleDownloadInvoice}
+                disabled={downloadingInvoice}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-750 text-white font-bold text-xs uppercase tracking-wider border border-zinc-700 transition-colors cursor-pointer disabled:opacity-50 min-h-[38px] shadow-sm hover:shadow"
+              >
+                {downloadingInvoice ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-orange-400" />
+                    <span>Preparing PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4 text-orange-400" />
+                    <span>
+                      {(status || '').toLowerCase() === 'completed'
+                        ? 'Download invoice'
+                        : 'Download invoice (pending)'}
+                    </span>
+                  </>
+                )}
+              </button>
+
+              {invoiceError && (
+                <p role="alert" className="text-xs text-rose-400 font-medium">
+                  {invoiceError}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
