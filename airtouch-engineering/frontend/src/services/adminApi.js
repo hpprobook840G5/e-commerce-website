@@ -136,14 +136,47 @@ export async function fetchTrendAnalytics(range = '30d') {
   return res.json()
 }
 
-export async function fetchAdminOrders() {
-  const res = await fetch(`${API_BASE_URL}/admin/orders`, {
+export async function fetchAdminOrders({ page = 1, limit = 20, status = 'all', orderType = 'all', search = '' } = {}) {
+  const params = new URLSearchParams()
+  if (page) params.set('page', String(page))
+  if (limit) params.set('limit', String(limit))
+  if (status && status !== 'all') params.set('status', status)
+  if (orderType && orderType !== 'all') params.set('orderType', orderType)
+  if (search) params.set('search', search)
+
+  const res = await fetch(`${API_BASE_URL}/admin/orders?${params.toString()}`, {
     method: 'GET',
     credentials: 'include',
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     throw new Error(err.message || 'Failed to fetch orders')
+  }
+  return res.json()
+}
+
+export async function updateAdminOrderStatus(id, status) {
+  const res = await fetch(`${API_BASE_URL}/admin/orders/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ status }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to update order status')
+  }
+  return res.json()
+}
+
+export async function fetchAdminOrderCounts() {
+  const res = await fetch(`${API_BASE_URL}/admin/orders/counts`, {
+    method: 'GET',
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to fetch order counts')
   }
   return res.json()
 }

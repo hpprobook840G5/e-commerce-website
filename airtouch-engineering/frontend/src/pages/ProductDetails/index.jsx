@@ -30,6 +30,7 @@ import {
 import { getProductById, getRelatedProducts } from '../../data/products.js'
 import { fetchStorefrontProductById } from '../../services/productsApi.js'
 import { useCartStore } from '../../store/cartStore.js'
+import { useDirectCheckoutStore } from '../../store/directCheckoutStore.js'
 import { useFavouritesStore } from '../../store/favouritesStore.js'
 import ProductCard from '../../components/products/ProductCard.jsx'
 
@@ -93,6 +94,7 @@ export default function ProductDetails() {
 
   // Zustand stores
   const addItem = useCartStore((state) => state.addItem)
+  const setDirectItems = useDirectCheckoutStore((state) => state.setDirectItems)
   const isFavourite = useFavouritesStore((state) => state.isFavourite(product?.id))
   const toggleFavourite = useFavouritesStore((state) => state.toggleFavourite)
 
@@ -237,9 +239,9 @@ export default function ProductDetails() {
   }
 
   const handleBuyNow = () => {
-    if (isOutOfStock) return
-    addItem(product.id, quantity)
-    navigate('/checkout')
+    if (isOutOfStock || !product?.id) return
+    setDirectItems([{ productId: product.id, quantity }])
+    navigate('/checkout?mode=direct')
   }
 
   const handlePincodeCheck = (e) => {

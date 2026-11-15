@@ -62,10 +62,10 @@ export default function SalesAnalyticsView() {
         fetchTrendAnalytics(range).catch(() => ({ trend: [] })),
       ])
 
-      if (sumRes) setSummary(sumRes)
-      if (prodRes?.products) setTopProducts(prodRes.products)
-      if (catRes?.categories) setCategories(catRes.categories)
-      if (trendRes?.trend) setTrendData(trendRes.trend)
+      setSummary(sumRes ?? null)
+      setTopProducts(prodRes?.products ?? [])
+      setCategories(catRes?.categories ?? [])
+      setTrendData(trendRes?.trend ?? [])
     } catch (err) {
       setError('Unable to load analytics metrics from server.')
     } finally {
@@ -78,7 +78,7 @@ export default function SalesAnalyticsView() {
   }, [range])
 
   const hasSalesData =
-    (summary?.totalOrders > 0 || topProducts.length > 0 || categories.length > 0)
+    Boolean((summary?.totalOrders ?? 0) > 0 || (topProducts?.length ?? 0) > 0 || (categories?.length ?? 0) > 0)
 
   return (
     <div className="space-y-8">
@@ -128,9 +128,18 @@ export default function SalesAnalyticsView() {
       </div>
 
       {error && (
-        <div className="p-4 rounded-xl bg-red-950/40 border border-red-800 text-red-300 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>{error}</span>
+        <div className="p-4 rounded-xl bg-red-950/40 border border-red-800 text-red-300 text-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
+            <span>{error}</span>
+          </div>
+          <button
+            type="button"
+            onClick={loadAnalytics}
+            className="underline text-orange-400 hover:text-orange-300 font-semibold cursor-pointer shrink-0"
+          >
+            Retry
+          </button>
         </div>
       )}
 
@@ -264,7 +273,7 @@ export default function SalesAnalyticsView() {
                         <td className="py-1 px-2">{d.date}</td>
                         <td className="py-1 px-2 text-right font-mono">{d.orders}</td>
                         <td className="py-1 px-2 text-right font-mono font-bold text-white">
-                          ₹{d.revenue.toLocaleString('en-IN')}
+                          ₹{(d?.revenue ?? 0).toLocaleString('en-IN')}
                         </td>
                       </tr>
                     ))}
@@ -351,7 +360,7 @@ export default function SalesAnalyticsView() {
                           <td className="py-1 px-2 capitalize">{p.category}</td>
                           <td className="py-1 px-2 text-right font-mono">{p.unitsSold}</td>
                           <td className="py-1 px-2 text-right font-mono font-bold text-orange-400">
-                            ₹{p.revenue.toLocaleString('en-IN')}
+                            ₹{(p?.revenue ?? 0).toLocaleString('en-IN')}
                           </td>
                         </tr>
                       ))}
@@ -434,7 +443,7 @@ export default function SalesAnalyticsView() {
                           <td className="py-1 px-2 text-white font-medium">{c.category}</td>
                           <td className="py-1 px-2 text-right font-mono">{c.unitsSold}</td>
                           <td className="py-1 px-2 text-right font-mono font-bold text-white">
-                            ₹{c.revenue.toLocaleString('en-IN')}
+                            ₹{(c?.revenue ?? 0).toLocaleString('en-IN')}
                           </td>
                         </tr>
                       ))}

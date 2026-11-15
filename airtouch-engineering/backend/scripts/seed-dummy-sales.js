@@ -118,13 +118,23 @@ async function run() {
       })
     }
 
+    // 70% completed, 30% pending; order_type spread across request, cod, upi
+    const isCompleted = i % 10 < 7
+    const orderTypes = ['request', 'cod', 'upi']
+    const orderType = orderTypes[i % 3]
+
     ordersToInsert.push({
       id: orderId,
       order_number: orderNumber,
+      order_type: orderType,
       customer_email: email,
+      customer_name: email.split('@')[0].replace('.', ' '),
+      customer_mobile: `+9198765${String(10000 + i).slice(-5)}`,
       total_paise: orderTotalPaise,
-      status: 'completed',
+      subtotal_paise: orderTotalPaise,
+      status: isCompleted ? 'completed' : 'pending',
       created_at: orderDate.toISOString(),
+      completed_at: isCompleted ? orderDate.toISOString() : null,
     })
   }
 

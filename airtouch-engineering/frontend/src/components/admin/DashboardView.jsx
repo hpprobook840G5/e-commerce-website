@@ -12,29 +12,60 @@ import {
   Loader2,
   RefreshCw,
 } from 'lucide-react'
-import { fetchAnalyticsSummary, fetchContactMessages } from '../../services/adminApi.js'
+import { fetchAnalyticsSummary, fetchContactMessages, fetchAdminOrderCounts } from '../../services/adminApi.js'
 
 export default function DashboardView({ onNavigateTab }) {
   const [summary, setSummary] = useState(null)
+  const [summaryError, setSummaryError] = useState(null)
+  const [orderCounts, setOrderCounts] = useState({ pending: 0, completed: 0 })
+  const [orderCountsError, setOrderCountsError] = useState(null)
   const [latestMessages, setLatestMessages] = useState([])
+  const [messagesError, setMessagesError] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [generalError, setGeneralError] = useState(null)
 
   const loadDashboardData = async () => {
     setLoading(true)
-    setError(null)
+    setGeneralError(null)
+    setSummaryError(null)
+    setOrderCountsError(null)
+    setMessagesError(null)
+
     try {
-      const [sumRes, msgRes] = await Promise.all([
-        fetchAnalyticsSummary().catch(() => null),
-        fetchContactMessages({ page: 1, limit: 5 }).catch(() => null),
+      const [sumRes, msgRes, countRes] = await Promise.allSettled([
+        fetchAnalyticsSummary(),
+        fetchContactMessages({ page: 1, limit: 5 }),
+        fetchAdminOrderCounts(),
       ])
 
-      if (sumRes) setSummary(sumRes)
-      if (msgRes && Array.isArray(msgRes.messages)) {
-        setLatestMessages(msgRes.messages.slice(0, 5))
+      if (sumRes.status === 'fulfilled' && sumRes.value) {
+        setSummary(sumRes.value)
+      } else {
+        setSummaryError(sumRes.reason?.message || 'Failed to load store metrics.')
+      }
+
+      if (countRes.status === 'fulfilled' && countRes.value) {
+        setOrderCounts(countRes.value)
+      } else {
+        setOrderCountsError(countRes.reason?.message || 'Failed to load order counts.')
+      }
+
+      if (msgRes.status === 'fulfilled' && Array.isArray(msgRes.value?.messages)) {
+        setLatestMessages(msgRes.value.messages.slice(0, 5))
+      } else {
+        setMessagesError(msgRes.reason?.message || 'Failed to load recent inquiries.')
+      }
+
+      // If all requests failed, set general inline error
+      if (
+        sumRes.status === 'rejected' &&
+        msgRes.status === 'rejected' &&
+        countRes.status === 'rejected'
+      ) {
+        setGeneralError('Backend server is unreachable. Please ensure the backend is running.')
       }
     } catch (err) {
-      setError('Unable to load dashboard data.')
+      setGeneralError('Unable to load dashboard data.')
     } finally {
       setLoading(false)
     }
@@ -75,10 +106,19 @@ export default function DashboardView({ onNavigateTab }) {
         </button>
       </div>
 
-      {error && (
-        <div className="p-4 rounded-xl bg-red-950/40 border border-red-800 text-red-300 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>{error}</span>
+      {generalError && (
+        <div className="p-4 rounded-xl bg-red-950/40 border border-red-800 text-red-300 text-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
+            <span>{generalError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={loadDashboardData}
+            className="underline text-orange-400 hover:text-orange-300 font-semibold cursor-pointer shrink-0"
+          >
+            Retry
+          </button>
         </div>
       )}
 
@@ -95,9 +135,13 @@ export default function DashboardView({ onNavigateTab }) {
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
-              ₹{(summary?.totalRevenue || 0).toLocaleString('en-IN')}
-            </div>
+            {summaryError ? (
+              <span className="text-xs font-mono text-amber-400">Unavailable</span>
+            ) : (
+              <div className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+                ₹{(summary?.totalRevenue || 0).toLocaleString('en-IN')}
+              </div>
+            )}
             <p className="text-[11px] text-zinc-500 mt-1">
               From {summary?.totalOrders || 0} completed transactions
             </p>
@@ -110,14 +154,25 @@ export default function DashboardView({ onNavigateTab }) {
             <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
               Total Orders
             </span>
-            <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
-              <ShoppingBag className="w-4 h-4" />
+            <div className="flex items-center gap-2">
+              {orderCounts?.pending > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/10 text-orange-400 border border-orange-500/30">
+                  {orderCounts.pending} Pending
+                </span>
+              )}
+              <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
+                <ShoppingBag className="w-4 h-4" />
+              </div>
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
-              {summary?.totalOrders || 0}
-            </div>
+            {summaryError && orderCountsError ? (
+              <span className="text-xs font-mono text-amber-400">Unavailable</span>
+            ) : (
+              <div className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+                {summary?.totalOrders ?? orderCounts?.completed ?? 0}
+              </div>
+            )}
             <p className="text-[11px] text-zinc-500 mt-1">
               Avg value: ₹{(summary?.averageOrderValue || 0).toLocaleString('en-IN')}
             </p>
@@ -135,9 +190,13 @@ export default function DashboardView({ onNavigateTab }) {
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
-              {summary?.activeProducts || 0}
-            </div>
+            {summaryError ? (
+              <span className="text-xs font-mono text-amber-400">Unavailable</span>
+            ) : (
+              <div className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+                {summary?.activeProducts || 0}
+              </div>
+            )}
             <p className="text-[11px] text-zinc-500 mt-1">
               Live in storefront catalogue
             </p>
@@ -155,9 +214,13 @@ export default function DashboardView({ onNavigateTab }) {
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
-              {summary?.unreadMessages || 0}
-            </div>
+            {summaryError && messagesError ? (
+              <span className="text-xs font-mono text-amber-400">Unavailable</span>
+            ) : (
+              <div className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+                {summary?.unreadMessages || 0}
+              </div>
+            )}
             <p className="text-[11px] text-zinc-500 mt-1">
               Pending customer inquiries
             </p>
@@ -186,7 +249,11 @@ export default function DashboardView({ onNavigateTab }) {
           </button>
         </div>
 
-        {latestMessages.length === 0 ? (
+        {messagesError ? (
+          <div className="py-6 px-4 text-center text-xs text-amber-400 bg-amber-500/10 rounded-xl border border-amber-500/20">
+            {messagesError}
+          </div>
+        ) : latestMessages.length === 0 ? (
           <div className="py-8 text-center text-xs text-zinc-500 bg-zinc-950/40 rounded-xl border border-zinc-850">
             No customer inquiries found.
           </div>
@@ -206,10 +273,12 @@ export default function DashboardView({ onNavigateTab }) {
                 {latestMessages.map((msg) => (
                   <tr key={msg.id} className="hover:bg-zinc-850/50 transition-colors">
                     <td className="py-3 px-3 text-zinc-400 font-mono whitespace-nowrap">
-                      {new Date(msg.created_at).toLocaleDateString('en-IN', {
-                        day: '2-digit',
-                        month: 'short',
-                      })}
+                      {msg.created_at
+                        ? new Date(msg.created_at).toLocaleDateString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                          })
+                        : '—'}
                     </td>
                     <td className="py-3 px-3 font-medium text-white whitespace-nowrap">
                       {msg.name}

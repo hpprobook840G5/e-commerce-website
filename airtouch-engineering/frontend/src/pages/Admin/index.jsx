@@ -3,19 +3,18 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '../../context/AdminAuthContext.jsx'
 import AdminSidebar from '../../components/admin/AdminSidebar.jsx'
 import AdminHeader from '../../components/admin/AdminHeader.jsx'
+import AdminErrorBoundary from '../../components/admin/AdminErrorBoundary.jsx'
 import DashboardView from '../../components/admin/DashboardView.jsx'
 import ProductsView from '../../components/admin/ProductsView.jsx'
 import ContactMessagesTable from '../../components/admin/ContactMessagesTable.jsx'
 import SalesAnalyticsView from '../../components/admin/SalesAnalyticsView.jsx'
 import OrdersView from '../../components/admin/OrdersView.jsx'
+import { fetchAdminOrderCounts, fetchContactMessages } from '../../services/adminApi.js'
 
 export default function Admin() {
   const { admin, logoutAdmin } = useAdminAuth()
   const location = useLocation()
   const navigate = useNavigate()
-
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [loggingOut, setLoggingOut] = useState(false)
 
   // Map current pathname to tab id
   const getTabFromPath = () => {
@@ -28,6 +27,35 @@ export default function Admin() {
   }
 
   const [activeTab, setActiveTab] = useState(getTabFromPath)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0)
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
+
+  // Fetch badge counts safely whenever activeTab changes
+  useEffect(() => {
+    let isMounted = true
+
+    fetchAdminOrderCounts()
+      .then((res) => {
+        if (isMounted && typeof res?.pending === 'number') {
+          setPendingOrdersCount(res.pending)
+        }
+      })
+      .catch(() => {})
+
+    fetchContactMessages({ limit: 1 })
+      .then((res) => {
+        if (isMounted && typeof res?.unreadCount === 'number') {
+          setUnreadMessagesCount(res.unreadCount)
+        }
+      })
+      .catch(() => {})
+
+    return () => {
+      isMounted = false
+    }
+  }, [activeTab])
 
   // Sync tab with route changes
   useEffect(() => {
@@ -69,6 +97,8 @@ export default function Admin() {
         onSelectTab={handleSelectTab}
         isMobileOpen={isMobileMenuOpen}
         onCloseMobile={() => setIsMobileMenuOpen(false)}
+        unreadCount={unreadMessagesCount}
+        pendingOrdersCount={pendingOrdersCount}
       />
 
       {/* Main Content Area */}
@@ -84,15 +114,17 @@ export default function Admin() {
 
         {/* View Body */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          {activeTab === 'dashboard' && <DashboardView onNavigateTab={handleSelectTab} />}
-          {activeTab === 'products' && <ProductsView />}
-          {activeTab === 'messages' && (
-            <div className="space-y-4">
-              <ContactMessagesTable />
-            </div>
-          )}
-          {activeTab === 'analytics' && <SalesAnalyticsView />}
-          {activeTab === 'orders' && <OrdersView />}
+          <AdminErrorBoundary key={activeTab}>
+            {activeTab === 'dashboard' && <DashboardView onNavigateTab={handleSelectTab} />}
+            {activeTab === 'products' && <ProductsView />}
+            {activeTab === 'messages' && (
+              <div className="space-y-4">
+                <ContactMessagesTable />
+              </div>
+            )}
+            {activeTab === 'analytics' && <SalesAnalyticsView />}
+            {activeTab === 'orders' && <OrdersView />}
+          </AdminErrorBoundary>
         </main>
       </div>
     </div>

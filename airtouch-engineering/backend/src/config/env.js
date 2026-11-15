@@ -53,6 +53,7 @@ export const RATE_LIMIT_LOGIN_MAX = parsePositiveInt(cleanEnv(process.env.RATE_L
 export const RATE_LIMIT_SIGNUP_MAX = parsePositiveInt(cleanEnv(process.env.RATE_LIMIT_SIGNUP_MAX), 10)
 export const RATE_LIMIT_OTP_MAX = parsePositiveInt(cleanEnv(process.env.RATE_LIMIT_OTP_MAX), 3)
 export const RATE_LIMIT_RESET_MAX = parsePositiveInt(cleanEnv(process.env.RATE_LIMIT_RESET_MAX), 5)
+export const RATE_LIMIT_ORDER_MAX = parsePositiveInt(cleanEnv(process.env.RATE_LIMIT_ORDER_MAX), 10)
 export const RATE_LIMIT_DEV_MULTIPLIER = parsePositiveInt(cleanEnv(process.env.RATE_LIMIT_DEV_MULTIPLIER), 10)
 
 export const isProduction = cleanEnv(process.env.NODE_ENV) === 'production'
@@ -97,6 +98,26 @@ export function checkEmailConfig() {
 
 export const isEmailConfigured = checkEmailConfig()
 
+// UPI and Admin Order Notification Settings
+export const UPI_VPA = cleanEnv(process.env.UPI_VPA)
+export const UPI_PAYEE_NAME = cleanEnv(process.env.UPI_PAYEE_NAME)
+export const ADMIN_NOTIFY_EMAIL = cleanEnv(process.env.ADMIN_NOTIFY_EMAIL)
+
+// Check UPI configuration and log missing variable names only
+export function checkUpiConfig() {
+  const missing = []
+  if (!UPI_VPA) missing.push('UPI_VPA')
+  if (!UPI_PAYEE_NAME) missing.push('UPI_PAYEE_NAME')
+
+  if (missing.length > 0 && cleanEnv(process.env.NODE_ENV) !== 'test') {
+    console.warn(`[UPI Configuration Notice]: Missing variables: ${missing.join(', ')}`)
+  }
+  return Boolean(UPI_VPA)
+}
+
+export const isUpiConfigured = Boolean(UPI_VPA)
+checkUpiConfig()
+
 export default {
   PORT: cleanEnv(process.env.PORT) || 5000,
   CORS_ORIGIN: cleanEnv(process.env.CORS_ORIGIN) || 'http://localhost:5173',
@@ -131,7 +152,13 @@ export default {
   RATE_LIMIT_SIGNUP_MAX,
   RATE_LIMIT_OTP_MAX,
   RATE_LIMIT_RESET_MAX,
+  RATE_LIMIT_ORDER_MAX,
   RATE_LIMIT_DEV_MULTIPLIER,
+  // Order Workflow & UPI
+  UPI_VPA,
+  UPI_PAYEE_NAME,
+  ADMIN_NOTIFY_EMAIL,
+  isUpiConfigured,
   isProduction,
   isAuthConfigured,
   isEmailConfigured,

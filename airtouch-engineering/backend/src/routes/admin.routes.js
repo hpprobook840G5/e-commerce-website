@@ -202,6 +202,8 @@ router.get('/analytics/products', requireAdmin, adminAnalyticsController.getProd
 router.get('/analytics/categories', requireAdmin, adminAnalyticsController.getCategoryPerformance)
 router.get('/analytics/trend', requireAdmin, adminAnalyticsController.getRevenueTrend)
 router.get('/orders', requireAdmin, adminAnalyticsController.getOrders)
+router.get('/orders/counts', requireAdmin, adminAnalyticsController.getOrderCounts)
+router.patch('/orders/:id/status', requireAdmin, adminAnalyticsController.updateOrderStatus)
 
 // ==========================================
 // PROTECTED CONTACT MESSAGES

@@ -44,11 +44,44 @@ export const adminAnalyticsController = {
 
   async getOrders(req, res) {
     try {
-      const orders = await salesAnalyticsService.listOrders()
-      return res.json({ success: true, orders })
+      const result = await salesAnalyticsService.listOrders(req.query)
+      return res.json({ success: true, ...result })
     } catch (err) {
       console.error('[AdminAnalyticsController] getOrders error:', err)
       return res.status(500).json({ error: 'Server Error', message: 'Failed to fetch orders' })
+    }
+  },
+
+  async updateOrderStatus(req, res) {
+    const { id } = req.params
+    const { status } = req.body
+
+    if (!status || !['pending', 'completed'].includes(status)) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Status must be either "pending" or "completed"',
+      })
+    }
+
+    try {
+      const updatedOrder = await salesAnalyticsService.updateOrderStatus(id, status)
+      return res.json({ success: true, order: updatedOrder })
+    } catch (err) {
+      if (err.status) {
+        return res.status(err.status).json({ message: err.message })
+      }
+      console.error('[AdminAnalyticsController] updateOrderStatus error:', err)
+      return res.status(500).json({ error: 'Server Error', message: 'Failed to update order status' })
+    }
+  },
+
+  async getOrderCounts(req, res) {
+    try {
+      const counts = await salesAnalyticsService.getOrderCounts()
+      return res.json({ success: true, ...counts })
+    } catch (err) {
+      console.error('[AdminAnalyticsController] getOrderCounts error:', err)
+      return res.status(500).json({ error: 'Server Error', message: 'Failed to fetch order counts' })
     }
   },
 }

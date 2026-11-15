@@ -24,7 +24,10 @@ export const FOOTER_DATA = {
     madeInLine: 'Made in Kerala · Engineered for every road',
   },
 
-  // Social media links read from Vite environment variables (hidden when empty)
+  // Social media links read from Vite environment variables (hidden when empty).
+  // NOTE FOR STORE OWNER: You can set your Instagram profile/bio link to the same WhatsApp wa.me URL
+  // (e.g. https://wa.me/91XXXXXXXXXX?text=Hi%2C%20I'd%20like%20to%20know%20more%20about%20AirTouch%20Engineering.),
+  // which enables Instagram's "Message" or bio action button to route customers directly to your WhatsApp chat.
   getSocialLinks: (env = import.meta.env) =>
     [
       {

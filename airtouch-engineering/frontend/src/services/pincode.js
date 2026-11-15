@@ -50,31 +50,41 @@ export function findCanonicalDistrict(stateName, rawDistrict) {
 /**
  * Lookup PIN code via India Post API.
  * Uses in-memory caching and supports AbortSignal.
+ * Supports lookupPincode(pincode, { signal }) as well as lookupPincode(pincode, signal).
  *
  * @param {string} pincode - 6-digit postal code
- * @param {AbortSignal} [signal] - Optional abort signal
+ * @param {AbortSignal|{ signal?: AbortSignal }} [optionsOrSignal] - Optional abort signal or options object
  * @returns {Promise<{
- *   success: boolean,
- *   rawState?: string,
- *   rawDistrict?: string,
- *   state?: string,
- *   district?: string,
- *   districtMatched?: boolean,
- *   postOffices?: string[],
- *   error?: string
- * }>}
+ *   state: string,
+ *   district: string,
+ *   success?: boolean
+ * }|null>}
  */
-export async function lookupPincode(pincode, signal) {
+export async function lookupPincode(pincode, optionsOrSignal = {}) {
+  const signal =
+    optionsOrSignal instanceof AbortSignal
+      ? optionsOrSignal
+      : optionsOrSignal?.signal
+
+  const isLegacySignal = optionsOrSignal instanceof AbortSignal
+
   const clean = String(pincode || '').trim()
   if (!/^[1-9][0-9]{5}$/.test(clean)) {
-    return {
-      success: false,
-      error: 'Please enter a valid 6-digit PIN code.',
+    if (isLegacySignal) {
+      return {
+        success: false,
+        error: 'Please enter a valid 6-digit PIN code.',
+      }
     }
+    return null
   }
 
   if (pincodeCache.has(clean)) {
-    return pincodeCache.get(clean)
+    const cached = pincodeCache.get(clean)
+    if (isLegacySignal) {
+      return cached
+    }
+    return cached.success ? { state: cached.state, district: cached.district, success: true } : null
   }
 
   try {
@@ -95,12 +105,14 @@ export async function lookupPincode(pincode, signal) {
       !Array.isArray(data[0].PostOffice) ||
       data[0].PostOffice.length === 0
     ) {
-      const result = {
+      const errorResult = {
         success: false,
+        state: null,
+        district: null,
         error: "We couldn't find this pincode. Please select your state and district manually.",
       }
-      pincodeCache.set(clean, result)
-      return result
+      pincodeCache.set(clean, errorResult)
+      return isLegacySignal ? errorResult : null
     }
 
     const po = data[0].PostOffice[0]
@@ -121,15 +133,18 @@ export async function lookupPincode(pincode, signal) {
     }
 
     pincodeCache.set(clean, result)
-    return result
+    return isLegacySignal ? result : { state: result.state, district: result.district, success: true }
   } catch (err) {
     if (err.name === 'AbortError') {
       throw err
     }
-    return {
+    const errResult = {
       success: false,
+      state: null,
+      district: null,
       error: "We couldn't find this pincode. Please select your state and district manually.",
     }
+    return isLegacySignal ? errResult : null
   }
 }
 

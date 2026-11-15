@@ -7,6 +7,8 @@ import Products from '../pages/Products/index.jsx'
 import ProductDetails from '../pages/ProductDetails/index.jsx'
 import Cart from '../pages/Cart/index.jsx'
 import Checkout from '../pages/Checkout/index.jsx'
+import Payment from '../pages/Checkout/Payment.jsx'
+import OrderResult from '../pages/OrderResult/index.jsx'
 import Auth from '../pages/Auth/index.jsx'
 import Account from '../pages/Account/index.jsx'
 import Orders from '../pages/Orders/index.jsx'
@@ -30,6 +32,8 @@ export default function AppRoutes() {
         {/* Protected Customer Routes */}
         <Route element={<ProtectedRoute />}>
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/checkout/payment" element={<Payment />} />
+          <Route path="/order/:orderNumber" element={<OrderResult />} />
           <Route path="/account" element={<Account />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/favourites" element={<Favourites />} />

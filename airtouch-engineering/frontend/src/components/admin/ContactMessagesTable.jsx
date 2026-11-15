@@ -69,15 +69,17 @@ export default function ContactMessagesTable() {
         topic: topicFilter,
       })
 
-      if (data.success) {
+      if (data?.success) {
         setMessages(data.messages || [])
         setTotalPages(data.totalPages || 1)
-        setTotalCount(data.total || 0)
+        setTotalCount(data.total || (data.messages?.length ?? 0))
       } else {
-        setError(data.message || 'Failed to load contact messages.')
+        setError(data?.message || 'Failed to load contact messages.')
+        setMessages([])
       }
     } catch (err) {
       setError(err.message || 'Failed to retrieve messages from server.')
+      setMessages([])
     } finally {
       setLoading(false)
     }
@@ -207,9 +209,18 @@ export default function ContactMessagesTable() {
 
       {/* Error Banner */}
       {error && (
-        <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
+        <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+            <span>{error}</span>
+          </div>
+          <button
+            type="button"
+            onClick={fetchMessages}
+            className="underline text-orange-400 hover:text-orange-300 font-semibold cursor-pointer shrink-0"
+          >
+            Retry
+          </button>
         </div>
       )}
 

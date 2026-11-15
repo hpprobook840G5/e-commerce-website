@@ -14,11 +14,13 @@ import {
   Wrench,
   Zap,
   ShoppingCart,
+  Star,
 } from 'lucide-react'
 import Badge from './Badge.jsx'
 import RatingStars from './RatingStars.jsx'
 import GradientButton from './GradientButton.jsx'
 import { useCartStore } from '../../store/cartStore.js'
+import { useDirectCheckoutStore } from '../../store/directCheckoutStore.js'
 
 function getCategoryIcon(category = '') {
   const normalized = category.toLowerCase()
@@ -93,6 +95,7 @@ export default function ProductCard({
   const shouldReduceMotion = useReducedMotion()
   const addItem = useCartStore((state) => state.addItem)
   const items = useCartStore((state) => state.items)
+  const setDirectItems = useDirectCheckoutStore((state) => state.setDirectItems)
 
   const id = product?.id ?? propId ?? 'part-unknown'
   const displayName = product?.name ?? propName ?? propTitle ?? 'AirTouch Component'
@@ -183,8 +186,8 @@ export default function ProductCard({
     e.preventDefault()
     e.stopPropagation()
     if (isOutOfStock) return
-    addItem(product || id, 1)
-    navigate('/checkout')
+    setDirectItems([{ productId: id, quantity: 1 }])
+    navigate('/checkout?mode=direct')
   }
 
   const handleQuickViewClick = (e) => {
@@ -419,17 +422,19 @@ export default function ProductCard({
     >
       <div className="flex flex-col justify-between h-full w-full">
         {/* 1. Image Area with Hover Zoom & Secondary Image Swap */}
-        <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-950 border-b border-zinc-800/80 flex items-center justify-center">
+        <div className="relative aspect-square w-full overflow-hidden bg-zinc-900/90 sm:bg-gradient-to-br sm:from-zinc-900 sm:via-zinc-900/90 sm:to-zinc-950 border-b border-zinc-800/80 flex items-center justify-center">
           {/* Ambient Glow */}
           <div
             className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(249,115,22,0.12),transparent_70%)] opacity-60 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
             aria-hidden="true"
           />
 
-          {/* Badges (Top-Left) */}
-          <div className="absolute top-2.5 left-2.5 z-20 flex flex-col gap-1 pointer-events-none">
+          {/* Badges (Top-Left) - Max 1 badge on mobile to avoid covering the image */}
+          <div className="absolute top-2 left-2 z-20 flex flex-col gap-1 pointer-events-none">
             {badges.slice(0, 2).map((badge, idx) => (
-              <Badge key={idx} text={badge} />
+              <span key={idx} className={idx > 0 ? 'hidden sm:inline-block' : 'inline-block'}>
+                <Badge text={badge} className="text-[9px] sm:text-[10px] px-1.5 py-0.5" />
+              </span>
             ))}
           </div>
 
@@ -438,22 +443,22 @@ export default function ProductCard({
             type="button"
             onClick={handleToggleWishlist}
             aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-            className={`absolute top-2.5 right-2.5 z-20 w-8 h-8 rounded-full border flex items-center justify-center transition-all cursor-pointer backdrop-blur-md ${
+            className={`absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full border flex items-center justify-center transition-all cursor-pointer backdrop-blur-md ${
               isWishlisted
                 ? 'bg-rose-500/20 border-rose-500 text-rose-500 opacity-100'
                 : 'bg-zinc-950/80 border-zinc-700/60 text-zinc-400 hover:text-white opacity-80 group-hover:opacity-100'
             }`}
           >
-            <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-rose-500' : ''}`} />
+            <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isWishlisted ? 'fill-rose-500' : ''}`} />
           </button>
 
-          {/* Quick View Button (Slides/Fades in on hover) */}
+          {/* Quick View Button (Desktop only on hover) */}
           {onQuickView && (
             <button
               type="button"
               onClick={handleQuickViewClick}
               aria-label="Quick view product details"
-              className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20 px-3 py-1.5 rounded-full bg-zinc-950/90 hover:bg-orange-500 text-zinc-300 hover:text-black border border-zinc-700 hover:border-orange-400 text-xs font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 group-hover:translate-y-0 translate-y-2 transition-all duration-200 flex items-center gap-1.5 shadow-lg shadow-black/50 cursor-pointer backdrop-blur-sm"
+              className="hidden sm:flex absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20 px-3 py-1.5 rounded-full bg-zinc-950/90 hover:bg-orange-500 text-zinc-300 hover:text-black border border-zinc-700 hover:border-orange-400 text-xs font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 group-hover:translate-y-0 translate-y-2 transition-all duration-200 items-center gap-1.5 shadow-lg shadow-black/50 cursor-pointer backdrop-blur-sm"
             >
               <Eye className="w-3.5 h-3.5" />
               <span>Quick View</span>
@@ -464,15 +469,15 @@ export default function ProductCard({
           <Link
             to={`/products/${id}`}
             aria-label={`View details for ${displayName}`}
-            className="w-full h-full flex items-center justify-center"
+            className="w-full h-full flex items-center justify-center p-2 sm:p-3"
           >
             {!imagePlaceholder && mainImage ? (
-              <div className="relative w-full h-full">
+              <div className="relative w-full h-full flex items-center justify-center">
                 <img
                   src={mainImage}
                   alt={displayName}
                   loading="lazy"
-                  className={`w-full h-full object-cover transition-all duration-500 ${
+                  className={`w-full h-full object-contain transition-all duration-500 ${
                     isHovered && secondaryImage ? 'opacity-0 scale-105' : 'opacity-100 scale-100'
                   }`}
                 />
@@ -481,18 +486,18 @@ export default function ProductCard({
                     src={secondaryImage}
                     alt={`${displayName} secondary angle`}
                     loading="lazy"
-                    className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${
+                    className={`absolute inset-0 w-full h-full object-contain transition-all duration-500 ${
                       isHovered ? 'opacity-100 scale-105' : 'opacity-0 scale-100'
                     }`}
                   />
                 )}
               </div>
             ) : (
-              <div className="relative z-10 flex flex-col items-center justify-center px-4 text-center select-none">
-                <div className="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/25 flex items-center justify-center text-orange-500 group-hover:scale-110 group-hover:border-orange-500/50 transition-transform duration-200">
-                  <CategoryIcon className="w-6 h-6" />
+              <div className="relative z-10 flex flex-col items-center justify-center px-2 text-center select-none">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-orange-500/10 border border-orange-500/25 flex items-center justify-center text-orange-500 group-hover:scale-110 group-hover:border-orange-500/50 transition-transform duration-200">
+                  <CategoryIcon className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <span className="mt-2 text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-500">
+                <span className="mt-1.5 sm:mt-2 text-[8px] sm:text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-500">
                   AirTouch Spec
                 </span>
               </div>
@@ -501,57 +506,69 @@ export default function ProductCard({
         </div>
 
         {/* 2. Card Body */}
-        <div className="p-4 sm:p-5 flex flex-col flex-1 justify-between">
+        <div className="p-2.5 sm:p-4 flex flex-col flex-1 justify-between min-w-0">
           <div>
             {/* Brand & Category Label */}
-            <div className="flex items-center justify-between text-[10px] font-bold tracking-[0.2em] text-zinc-400 uppercase mb-1">
-              <span>{brand}</span>
-              <span className="text-orange-500/90">{category}</span>
+            <div className="flex items-center justify-between gap-1 text-[9px] sm:text-[10px] font-bold tracking-wider text-zinc-400 uppercase mb-1 min-w-0">
+              <span className="truncate">{brand}</span>
+              <span className="text-orange-500/90 shrink-0">{category}</span>
             </div>
 
-            {/* Product Title (2-line clamp) */}
+            {/* Product Title (2-line clamp with fixed line-height for alignment) */}
             <Link to={`/products/${id}`}>
               <h3
                 title={displayName}
-                className="text-sm sm:text-base font-bold tracking-wide text-white group-hover:text-orange-400 transition-colors line-clamp-2 leading-snug min-h-[2.5rem]"
+                className="text-xs sm:text-sm font-bold tracking-tight text-white group-hover:text-orange-400 transition-colors line-clamp-2 leading-snug min-h-[2rem] sm:min-h-[2.5rem]"
               >
                 {displayName}
               </h3>
             </Link>
 
-            {/* Star Rating */}
-            <div className="mt-2 flex items-center justify-between">
-              <RatingStars rating={rating} reviewCount={reviewCount} />
+            {/* Rating */}
+            <div className="mt-1.5 sm:mt-2 flex items-center justify-between gap-1 min-w-0">
+              <div className="sm:hidden flex items-center gap-1">
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-zinc-800/90 border border-zinc-700/60 text-[10px] font-bold text-amber-400">
+                  <Star className="w-2.5 h-2.5 fill-amber-400 stroke-amber-400" />
+                  <span>{Number(rating).toFixed(1)}</span>
+                </span>
+                {reviewCount > 0 && (
+                  <span className="text-[10px] text-zinc-500">({reviewCount})</span>
+                )}
+              </div>
+              <div className="hidden sm:flex items-center">
+                <RatingStars rating={rating} reviewCount={reviewCount} />
+              </div>
+
               {bikeType && (
-                <span className="text-[9px] font-semibold text-zinc-500 uppercase">
+                <span className="text-[8px] sm:text-[9px] font-semibold text-zinc-500 uppercase truncate max-w-[60px] sm:max-w-none">
                   {Array.isArray(bikeType) ? bikeType[0] : bikeType}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="mt-4 pt-3.5 border-t border-zinc-800/80">
+          <div className="mt-2.5 sm:mt-4 pt-2 sm:pt-3.5 border-t border-zinc-800/80">
             {/* Price Row */}
-            <div className="flex items-baseline gap-2 mb-3">
-              <span className="text-lg font-extrabold text-orange-500 tracking-tight">
+            <div className="flex flex-wrap items-baseline gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+              <span className="text-sm sm:text-base lg:text-lg font-extrabold text-orange-500 tracking-tight">
                 ₹{price.toLocaleString('en-IN')}
               </span>
               {hasValidDiscount && (
-                <span className="text-xs font-medium text-zinc-500 line-through">
+                <span className="text-[10px] sm:text-xs font-medium text-zinc-500 line-through">
                   ₹{Number(originalPrice).toLocaleString('en-IN')}
                 </span>
               )}
             </div>
 
             {/* Action Buttons (Vertically Stacked) */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5 sm:gap-2">
               {/* Add to Cart / In Cart / Out of Stock Button */}
               {isOutOfStock ? (
                 <button
                   type="button"
                   disabled
                   aria-disabled="true"
-                  className="w-full px-3 py-2 text-xs min-h-[38px] uppercase tracking-wider font-bold rounded-lg bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50 flex items-center justify-center"
+                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs min-h-[36px] sm:min-h-[38px] uppercase tracking-wider font-bold rounded-lg bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50 flex items-center justify-center"
                 >
                   Out of stock
                 </button>
@@ -560,10 +577,10 @@ export default function ProductCard({
                   to="/cart"
                   onClick={(e) => e.stopPropagation()}
                   aria-label={`In cart with quantity ${inCartQty}. Go to cart`}
-                  className="w-full px-3 py-2 text-xs min-h-[38px] uppercase tracking-wider font-extrabold rounded-lg bg-orange-500/15 border border-orange-500/50 hover:bg-orange-500/25 text-orange-400 hover:text-orange-300 flex items-center justify-center gap-1.5 transition-colors"
+                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs min-h-[36px] sm:min-h-[38px] uppercase tracking-wider font-extrabold rounded-lg bg-orange-500/15 border border-orange-500/50 hover:bg-orange-500/25 text-orange-400 hover:text-orange-300 flex items-center justify-center gap-1 sm:gap-1.5 transition-colors"
                 >
-                  <ShoppingCart className="w-3.5 h-3.5 text-orange-400" />
-                  <span>In cart · Qty {inCartQty}</span>
+                  <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-orange-400 shrink-0" />
+                  <span className="truncate">In cart · Qty {inCartQty}</span>
                 </Link>
               ) : (
                 <GradientButton
@@ -571,7 +588,7 @@ export default function ProductCard({
                   fullWidth
                   isAdded={isAdded}
                   onClick={handleAddToCart}
-                  className="min-h-[38px] py-2"
+                  className="min-h-[36px] sm:min-h-[38px] py-1.5 sm:py-2 px-2 sm:px-3 text-[11px] sm:text-xs"
                 >
                   Add to Cart
                 </GradientButton>
@@ -587,7 +604,7 @@ export default function ProductCard({
                   disabled
                   aria-disabled="true"
                   aria-label={`Buy ${displayName} now`}
-                  className="w-full px-3 py-2 text-xs min-h-[38px] uppercase tracking-wider font-bold rounded-lg bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50 flex items-center justify-center"
+                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs min-h-[36px] sm:min-h-[38px] uppercase tracking-wider font-bold rounded-lg bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50 flex items-center justify-center"
                 >
                   Buy Now
                 </button>
@@ -606,9 +623,9 @@ export default function ProductCard({
                       ? undefined
                       : { scale: 0.96, transition: { duration: 0.12 } }
                   }
-                  className="w-full px-3 py-2 text-xs min-h-[38px] uppercase tracking-wider font-extrabold rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-black shadow-[0_0_20px_rgba(249,115,22,0.35)] hover:shadow-[0_0_28px_rgba(249,115,22,0.55)] flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs min-h-[36px] sm:min-h-[38px] uppercase tracking-wider font-extrabold rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-black shadow-[0_0_20px_rgba(249,115,22,0.35)] hover:shadow-[0_0_28px_rgba(249,115,22,0.55)] flex items-center justify-center gap-1 sm:gap-1.5 transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                 >
-                  <Zap className="w-3.5 h-3.5 fill-current shrink-0" />
+                  <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current shrink-0" />
                   <span>Buy Now</span>
                 </motion.button>
               )}

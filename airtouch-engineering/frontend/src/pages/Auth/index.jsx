@@ -20,6 +20,11 @@ import {
 import { useCustomerAuth } from '../../context/CustomerAuthContext.jsx'
 import { indiaStates } from '../../data/indiaStates.js'
 import { indiaDistricts } from '../../data/indiaDistricts.js'
+import {
+  lookupPincode,
+  findCanonicalState,
+  findCanonicalDistrict,
+} from '../../services/pincode.js'
 import OtpInput from '../../components/auth/OtpInput.jsx'
 
 function maskEmail(email) {
@@ -109,6 +114,10 @@ export default function Auth() {
   const [selectedState, setSelectedState] = useState('')
   const [selectedDistrict, setSelectedDistrict] = useState('')
   const [pincode, setPincode] = useState('')
+  const [isLookingUpPincode, setIsLookingUpPincode] = useState(false)
+  const [invalidPincodeLookup, setInvalidPincodeLookup] = useState(false)
+  const [lastCheckedPincode, setLastCheckedPincode] = useState('')
+  const pincodeAbortRef = useRef(null)
 
   // Verification & Password Reset state
   const [otpEmail, setOtpEmail] = useState('')
@@ -134,6 +143,7 @@ export default function Auth() {
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
+      if (pincodeAbortRef.current) pincodeAbortRef.current.abort()
     }
   }, [])
 
@@ -153,6 +163,97 @@ export default function Auth() {
 
   // Update district options when state changes
   const districts = selectedState ? indiaDistricts[selectedState] || [] : []
+
+  // Auto-fill state and district when 6-digit pincode is entered
+  useEffect(() => {
+    const cleanPin = pincode.trim()
+
+    // Cancel any previous in-flight lookup
+    if (pincodeAbortRef.current) {
+      pincodeAbortRef.current.abort()
+      pincodeAbortRef.current = null
+    }
+
+    if (cleanPin.length < 6) {
+      setIsLookingUpPincode(false)
+      setInvalidPincodeLookup(false)
+      setLastCheckedPincode('')
+      return
+    }
+
+    // Must be valid format (zone 1-9 followed by 5 digits)
+    if (!/^[1-9][0-9]{5}$/.test(cleanPin)) {
+      setIsLookingUpPincode(false)
+      setInvalidPincodeLookup(false)
+      setLastCheckedPincode('')
+      setFieldErrors((prev) => ({
+        ...prev,
+        pincode: 'Enter a valid 6-digit postal code (cannot start with 0).',
+      }))
+      return
+    }
+
+    const controller = new AbortController()
+    pincodeAbortRef.current = controller
+
+    setIsLookingUpPincode(true)
+
+    lookupPincode(cleanPin, { signal: controller.signal })
+      .then((res) => {
+        setIsLookingUpPincode(false)
+        setLastCheckedPincode(cleanPin)
+
+        if (res && res.state) {
+          // Success! Match state in indiaStates (case-insensitive)
+          const matchedState = findCanonicalState(res.state) || res.state
+          setSelectedState(matchedState)
+          clearFieldError('state')
+
+          // Match district in indiaDistricts[state] (case-insensitive)
+          const matchedDistrict = matchedState
+            ? findCanonicalDistrict(matchedState, res.district)
+            : null
+
+          if (matchedDistrict) {
+            setSelectedDistrict(matchedDistrict)
+            clearFieldError('district')
+          } else {
+            setSelectedDistrict('')
+            setFieldErrors((prev) => ({
+              ...prev,
+              district: 'Please choose your district.',
+            }))
+          }
+
+          setInvalidPincodeLookup(false)
+          clearFieldError('pincode')
+        } else {
+          // Lookup failed or returned Error/no offices
+          setInvalidPincodeLookup(true)
+          setFieldErrors((prev) => ({
+            ...prev,
+            pincode:
+              "We couldn't find this pincode. Please select your state and district manually.",
+          }))
+        }
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          setIsLookingUpPincode(false)
+          setLastCheckedPincode(cleanPin)
+          setInvalidPincodeLookup(true)
+          setFieldErrors((prev) => ({
+            ...prev,
+            pincode:
+              "We couldn't find this pincode. Please select your state and district manually.",
+          }))
+        }
+      })
+
+    return () => {
+      controller.abort()
+    }
+  }, [pincode])
 
   const clearFieldError = (field) => {
     setFieldErrors((prev) => {
@@ -240,9 +341,13 @@ export default function Auth() {
         return ''
       }
       case 'pincode': {
-        if (!value.trim()) return 'Pincode is required.'
-        if (!/^[1-9][0-9]{5}$/.test(value.trim())) {
+        const clean = (value || '').trim()
+        if (!clean) return 'Pincode is required.'
+        if (!/^[1-9][0-9]{5}$/.test(clean)) {
           return 'Enter a valid 6-digit postal code (cannot start with 0).'
+        }
+        if (invalidPincodeLookup && clean === lastCheckedPincode) {
+          return "We couldn't find this pincode. Please select your state and district manually."
         }
         return ''
       }
@@ -356,9 +461,18 @@ export default function Auth() {
         pincode: true,
       })
 
+      if (isLookingUpPincode) {
+        return
+      }
+
       const hasError = Object.values(errors).some(Boolean)
       if (hasError) {
-        setErrorMessage('Please correct the highlighted fields before submitting.')
+        const errorKeys = Object.keys(errors).filter((k) => errors[k])
+        if (errorKeys.length === 1 && errorKeys[0] === 'pincode') {
+          setErrorMessage('')
+        } else {
+          setErrorMessage('Please correct the highlighted fields before submitting.')
+        }
         return
       }
 
@@ -1062,29 +1176,48 @@ export default function Auth() {
                         >
                           Pincode <span className="text-orange-500">*</span>
                         </label>
-                        <input
-                          id="pincode"
-                          name="pincode"
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={6}
-                          required
-                          value={pincode}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, '').slice(0, 6)
-                            setPincode(val)
-                            clearFieldError('pincode')
-                          }}
-                          onBlur={() => handleBlur('pincode')}
-                          aria-invalid={Boolean(fieldErrors.pincode)}
-                          aria-describedby={fieldErrors.pincode ? 'pincode-error' : undefined}
-                          placeholder="6-digit pin"
-                          className={`w-full bg-zinc-950 border ${
-                            fieldErrors.pincode
-                              ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
-                              : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
-                          } text-white text-xs rounded-xl px-3 py-2.5 placeholder-zinc-500 focus:outline-none focus:ring-1 font-mono transition-colors`}
-                        />
+                        <div className="relative">
+                          <input
+                            id="pincode"
+                            name="pincode"
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            required
+                            value={pincode}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '').slice(0, 6)
+                              setPincode(val)
+                              if (val.length < 6) {
+                                if (val.startsWith('0')) {
+                                  setFieldErrors((prev) => ({
+                                    ...prev,
+                                    pincode: 'Enter a valid 6-digit postal code (cannot start with 0).',
+                                  }))
+                                } else {
+                                  clearFieldError('pincode')
+                                }
+                              }
+                            }}
+                            onBlur={() => handleBlur('pincode')}
+                            aria-invalid={Boolean(fieldErrors.pincode)}
+                            aria-describedby={fieldErrors.pincode ? 'pincode-error' : undefined}
+                            placeholder="6-digit pin"
+                            className={`w-full bg-zinc-950 border ${
+                              fieldErrors.pincode
+                                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500'
+                                : 'border-zinc-800 focus:border-orange-500 focus:ring-orange-500'
+                            } text-white text-xs rounded-xl px-3 py-2.5 ${isLookingUpPincode ? 'pr-8' : ''} placeholder-zinc-500 focus:outline-none focus:ring-1 font-mono transition-colors`}
+                          />
+                          {isLookingUpPincode && (
+                            <div
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-orange-500"
+                              aria-label="Checking pincode"
+                            >
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            </div>
+                          )}
+                        </div>
                         <div aria-live="polite">
                           {fieldErrors.pincode && (
                             <p id="pincode-error" className="mt-1 text-[11px] text-rose-400 break-words">

@@ -68,13 +68,13 @@ export default function ProductsView() {
         status: statusFilter,
       })
 
-      if (res.products) {
-        setProducts(res.products)
-        setTotalPages(res.totalPages || 1)
-        setTotalCount(res.total || res.products.length)
-      }
+      const fetchedProducts = res?.products ?? []
+      setProducts(fetchedProducts)
+      setTotalPages(res?.totalPages ?? 1)
+      setTotalCount(res?.total ?? fetchedProducts.length)
     } catch (err) {
       setError(err.message || 'Failed to load catalog products.')
+      setProducts([])
     } finally {
       setLoading(false)
     }
@@ -179,9 +179,18 @@ export default function ProductsView() {
       </div>
 
       {error && (
-        <div className="p-4 rounded-xl bg-red-950/40 border border-red-800 text-red-300 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>{error}</span>
+        <div className="p-4 rounded-xl bg-red-950/40 border border-red-800 text-red-300 text-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
+            <span>{error}</span>
+          </div>
+          <button
+            type="button"
+            onClick={loadProducts}
+            className="underline text-orange-400 hover:text-orange-300 font-semibold cursor-pointer shrink-0"
+          >
+            Retry
+          </button>
         </div>
       )}
 

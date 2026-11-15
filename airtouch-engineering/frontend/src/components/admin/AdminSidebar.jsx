@@ -24,6 +24,7 @@ export default function AdminSidebar({
   isMobileOpen,
   onCloseMobile,
   unreadCount = 0,
+  pendingOrdersCount = 0,
 }) {
   const content = (
     <div className="flex flex-col h-full justify-between">
@@ -86,6 +87,15 @@ export default function AdminSidebar({
                     }`}
                   >
                     {unreadCount}
+                  </span>
+                )}
+                {item.id === 'orders' && pendingOrdersCount > 0 && (
+                  <span
+                    className={`px-2 py-0.5 text-[10px] rounded-full font-mono font-bold ${
+                      isActive ? 'bg-black text-orange-400' : 'bg-orange-500 text-black'
+                    }`}
+                  >
+                    {pendingOrdersCount}
                   </span>
                 )}
               </button>

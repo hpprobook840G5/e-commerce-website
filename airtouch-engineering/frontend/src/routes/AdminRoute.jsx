@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { ShieldCheck, Loader2 } from 'lucide-react'
 import { useAdminAuth } from '../context/AdminAuthContext.jsx'
+import AdminErrorBoundary from '../components/admin/AdminErrorBoundary.jsx'
 
 export default function AdminRoute() {
   const { admin, adminLoading } = useAdminAuth()
@@ -22,6 +23,10 @@ export default function AdminRoute() {
     return <Navigate to="/admin/login" replace />
   }
 
-  return <Outlet />
+  return (
+    <AdminErrorBoundary>
+      <Outlet />
+    </AdminErrorBoundary>
+  )
 }
 
